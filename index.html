@@ -118,10 +118,35 @@
     .walker2::before{ content:'🚶'; }
     .over-tip{ font-size:13px; color:#cbd5e1 }
 
-    /* D-Pad */
-    .dpad{ position:fixed; bottom:16px; left:16px; display:none; gap:8px; z-index:9999 }
-    .dpad button{ width:56px; height:56px; border-radius:12px; font-size:20px }
-    @media (max-width: 720px){ .dpad{ display:flex } }
+    /* D-Pad — ปุ่มซ้าย/ขวาติดขอบจอ */
+.dpad{
+  position: fixed;
+  bottom: max(20px, env(safe-area-inset-bottom) + 10px);
+  left: 0; right: 0;
+  display: none;                 /* เปิดเฉพาะจอเล็ก */
+  justify-content: space-between;/* ดันปุ่มไปซ้าย/ขวา */
+  padding: 0 20px;
+  z-index: 9999;
+  pointer-events: none;          /* ไม่บังการแตะส่วนอื่น */
+}
+.dpad .btn{
+  pointer-events: auto;          /* ให้ปุ่มรับการแตะได้ */
+  width: 64px; height: 64px;
+  border-radius: 50%;
+  font-size: 22px;
+  background: linear-gradient(145deg,#1a233b,#24324f);
+  border: 2px solid #6af0ff;
+  box-shadow: 0 0 12px #00eaff88;
+  transition: .2s;
+}
+.dpad .btn:active{
+  transform: scale(.9);
+  box-shadow: 0 0 20px #00ffffcc;
+}
+@media (max-width: 720px){
+  .dpad{ display:flex; }
+}
+
 
     /* Modals */
     .modal{position:fixed; inset:0; background:rgba(0,0,0,.65); display:none; align-items:center; justify-content:center; padding:16px; z-index:9000}
