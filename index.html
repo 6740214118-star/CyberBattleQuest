@@ -141,12 +141,49 @@
     .toast{position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#0b1022; color:#c7d2fe; border:1px solid #39406a; border-radius:10px; padding:8px 12px; display:none; z-index:9999}
     .toast.show{display:block}
 
-    @media (max-width: 640px) {
-      .container { padding: 12px; }
-      .stage { height: 300px; }
-      .tile{ height:60px }
-      .btn { padding:16px 18px; font-size:16px }
-      input[type="text"]{ font-size:18px }
+    /* ==== Mobile polish (drop-in patch) ==== */
+
+/* ป้องกัน iOS ย่อ/ขยายอักษรเอง */
+html { -webkit-text-size-adjust: 100%; }
+
+/* เผื่อ safe-area (รอยบาก/แถบล่าง) และหลบทูลบาร์ iOS */
+body {
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-top: max(0px, env(safe-area-inset-top));
+}
+
+/* HUD ให้ข้อความขึ้นบรรทัดใหม่ได้ ไม่ล้น */
+.stat { display:flex; justify-content:space-between; gap:6px; flex-wrap:wrap; }
+.stat > span { min-width: 0; }
+
+/* ปรับขนาดเวที/การ์ดบนจอเล็ก */
+@media (max-width: 640px) {
+  .container { padding: 12px; }
+  .stage { height: 280px; }
+  .panel { min-width: 100%; }   /* HUD ซ้อนเป็นคอลัมน์ */
+  .hud { gap: 10px; }
+
+  /* ปุ่มให้เรียงเป็นคอลัมน์ แตะง่ายขึ้น */
+  .actions { display:flex; flex-direction:column; gap:10px; }
+  .actions .btn { width:100%; padding:16px 18px; font-size:16px; }
+
+  /* บาร์พลังไม่ล้นขอบ */
+  .bar { height: 14px; }
+  .bar > span { will-change: width; }
+
+  /* เวิร์ดไทยยาวๆให้ตัดแถวได้ */
+  #enemyName, #playerNameLbl, .qhead, .choice {
+    word-break: break-word; overflow-wrap: anywhere;
+  }
+
+  /* D-Pad ไม่โดนทับ ทูลบาร์ล่าง */
+  .dpad { bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); }
+}
+
+/* ปุ่มแชร์/ย้อนกลับของเบราว์เซอร์ที่ทับองค์ประกอบล่าง: เผื่อพื้นที่เพิ่มให้ปุ่มแอคชัน */
+.actions + .actions,
+.card:last-child { margin-bottom: 8px; }
+
     }
 
     /* FX */
