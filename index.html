@@ -1,764 +1,1076 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Cyber Security BattleQuest — Final Build</title>
-  <style>
-    :root{
-      --bg:#0b1024; --panel:#151a2f; --accent:#6ee7ff; --accent2:#a78bfa;
-      --text:#e5e7eb; --muted:#9ca3af; --danger:#ef4444; --good:#22c55e;
-      --gold:#f7d774; --card1:#161b31; --card2:#101425;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0; font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial;
-      background:radial-gradient(1400px 600px at 80% -20%, #223, transparent), var(--bg);
-      color:var(--text);
-      -webkit-tap-highlight-color: transparent;
-    }
-    .container{max-width:1100px;margin:0 auto;padding:24px}
-    .card{background:linear-gradient(180deg,var(--card1) 0%, var(--card2) 100%); border:1px solid #2a2f45; border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.35)}
-    .row{display:flex; gap:16px; align-items:stretch; flex-wrap:wrap}
-    .col{flex:1; min-width:260px}
-    .btn{background:#1c2240; border:1px solid #39406a; color:#dbeafe; padding:14px 18px; border-radius:12px; cursor:pointer; font-weight:700; line-height:1.2}
-    .btn:hover{filter:brightness(1.08)} .btn:disabled{opacity:.55; cursor:not-allowed}
-    .btn-accent{background:linear-gradient(90deg, var(--accent), var(--accent2)); color:#0b1220; border:none}
-    input[type="text"]{
-      width:100%; padding:12px 14px; border-radius:10px; border:1px solid #2a2f45;
-      background:#0f1631; color:var(--text); font-size:16px;
-    }
-    label{display:block; margin-bottom:6px; color:#cbd5e1; font-size:14px}
-    .hud{display:flex; gap:16px; margin-bottom:12px; flex-wrap:wrap}
-    .panel{flex:1; min-width:260px; background:#0e1326; border:1px solid #2a2f45; border-radius:12px; padding:12px}
-    .bar{height:16px; background:#1f2937; border-radius:999px; overflow:hidden; border:1px solid #374151}
-    .bar>span{display:block; height:100%; background:linear-gradient(90deg, #22c55e,#84cc16); width:100%}
-    .bar.bad>span{background:linear-gradient(90deg, #f43f5e,#f97316)}
-    .badge{display:inline-block; font-size:12px; color:#0b1220; background:linear-gradient(90deg,#6ee7ff,#a78bfa); padding:2px 8px; border-radius:999px; font-weight:700}
-    .muted{color:var(--muted)}
-    .pill{padding:6px 10px; background:#10162a; border:1px solid #374151; border-radius:999px; font-size:13px}
-
-    /* Stage area */
-    .stage{position:relative; height:360px; border:1px dashed #2a2f45; border-radius:16px; overflow:hidden}
-    .ground{position:absolute; bottom:0; left:0; right:0; height:90px; background:linear-gradient(180deg, rgba(110,231,255,.1), rgba(0,0,0,.2)), repeating-linear-gradient(45deg, rgba(167,139,250,.08) 0 6px, transparent 6px 12px)}
-    .entity{position:absolute; bottom:90px; width:220px; height:220px; display:flex; align-items:center; justify-content:center}
-    .player{left:80px}.enemy{right:80px}
-
-    /* Sprites */
-    .sprite{position:relative; width:160px; height:160px; border-radius:14px; background:#0f172a; border:2px solid #334155; box-shadow:inset 0 8px 26px rgba(0,0,0,.5)}
-    .sprite .face{position:absolute; inset:18px; border-radius:12px; background:#1e293b}
-    .sprite .eye{position:absolute; top:38px; width:22px; height:22px; background:#0b1220; border-radius:50%; box-shadow:inset 0 0 0 5px #e5e7eb}
-    .sprite .eye.left{left:34px}.sprite .eye.right{right:34px}
-    .sprite .mouth{position:absolute; bottom:34px; left:50%; transform:translateX(-50%); width:60px; height:16px; background:#0b1220; border-radius:10px}
-    .sprite .deco, .sprite .emblem, .sprite .visor, .sprite .hook, .sprite .mask, .sprite .waves, .sprite .antenna, .sprite .lock, .sprite .chain{ position:absolute; pointer-events:none; }
-
-    /* Idle + combat anims */
-    @keyframes idleFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-    .sprite{animation: idleFloat 2.5s ease-in-out infinite}
-    @keyframes hitFlash{0%,100%{filter:none}50%{filter:brightness(1.8) saturate(1.3)}}
-    .hit{animation: hitFlash 280ms ease}
-    @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
-    .shake{animation: shake 200ms linear}
-    @keyframes swing{0%{transform:translateX(0)}50%{transform:translateX(24px)}100%{transform:translateX(0)}}
-    .attack{animation: swing 280ms ease}
-    /* New: lunge forward for hero attack */
-    @keyframes lunge { 0%{ transform: translateX(0) } 50%{ transform: translateX(42px) } 100%{ transform: translateX(0) } }
-    .lunge{ animation: lunge 320ms ease }
-
-    /* Character palettes */
-    .hero .face{background:linear-gradient(180deg,#0ea5e9,#1f2937)}
-    .hero .visor{left:28px; right:28px; top:54px; height:20px; background:linear-gradient(90deg,#a7f3d0,#22d3ee); border-radius:8px}
-    .hero .deco{left:28px; right:28px; top:28px; height:8px; background:linear-gradient(90deg,#6ee7ff,#a78bfa); border-radius:6px; box-shadow:0 0 8px rgba(110,231,255,.6)}
-    .hero .emblem{bottom:28px; left:50%; transform:translateX(-50%) rotate(45deg); width:16px; height:16px; background:#a78bfa; border-radius:4px; box-shadow:0 0 10px rgba(167,139,250,.8)}
-    .enemy-scout .face{background:linear-gradient(180deg,#22d3ee,#164e63)}
-    .enemy-phish .face{background:linear-gradient(180deg,#a78bfa,#312e81)}
-    .enemy-fake .face{background:linear-gradient(180deg,#fbbf24,#78350f)}
-    .enemy-wifi .face{background:linear-gradient(180deg,#4ade80,#064e3b)}
-    .boss-ransom .face{background:linear-gradient(180deg,#ef4444,#111827)}
-    .boss-ransom .eye{box-shadow:inset 0 0 0 4px #fecaca}
-
-    /* Themed backgrounds with texture */
-    .stage::before{ content:''; position:absolute; inset:0; opacity:.18; pointer-events:none; }
-    .theme-1 .stage{ background:
-      radial-gradient(900px 320px at 50% 0%, rgba(110,231,255,.12), transparent),
-      repeating-linear-gradient( 45deg, rgba(99,102,241,.05) 0 12px, transparent 12px 24px); }
-    .theme-1 .stage::before{ background:radial-gradient( at 80% 20%, rgba(99,102,241,.25), transparent 60% ) }
-    .theme-2 .stage{ background:
-      radial-gradient(900px 320px at 50% 0%, rgba(167,139,250,.12), transparent),
-      repeating-linear-gradient( 135deg, rgba(167,139,250,.05) 0 10px, transparent 10px 20px); }
-    .theme-3 .stage{ background:
-      radial-gradient(900px 320px at 50% 0%, rgba(251,191,36,.12), transparent),
-      repeating-linear-gradient( 90deg, rgba(251,191,36,.05) 0 14px, transparent 14px 28px); }
-    .theme-4 .stage{ background:
-      radial-gradient(900px 320px at 50% 0%, rgba(74,222,128,.12), transparent),
-      repeating-linear-gradient( 0deg, rgba(74,222,128,.05) 0 12px, transparent 12px 24px); }
-    .theme-5 .stage{ background:
-      radial-gradient(900px 320px at 50% 0%, rgba(239,68,68,.12), transparent),
-      repeating-linear-gradient( 45deg, rgba(239,68,68,.06) 0 10px, transparent 10px 20px); }
-
-    /* Overworld */
-    .overwrap{ position:relative; border:1px solid #2a2f45; border-radius:14px; padding:12px; background:linear-gradient(180deg,#0c1330,#0a1024) }
-    .strip{ display:grid; grid-template-columns: repeat(7, 1fr); gap:8px; position:relative }
-    .tile{ height:72px; background:#0d1636; border:1px solid #2b3360; border-radius:12px; position:relative; overflow:hidden }
-    .tile::after{ content:''; position:absolute; inset:0; background:linear-gradient(180deg,transparent,rgba(255,255,255,.05)); }
-    .tile.shop{ outline:2px dashed #f0abfc; }
-    .tile.gate{ outline:2px solid #60a5fa; }
-    .over-hud{ display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px; flex-wrap:wrap }
-    .coin{ color:var(--gold); font-weight:800 }
-    .walker2{
-      position:absolute; width:48px; height:48px; border-radius:12px;
-      background:#1e293b; border:2px solid #334155;
-      top:calc(50% - 24px); left:0;
-      display:flex; align-items:center; justify-content:center;
-      box-shadow:0 6px 18px rgba(0,0,0,.35) inset;
-      transition:left .35s ease; z-index:5;
-      font-size:24px;
-    }
-    .walker2::before{ content:'🚶'; }
-    .over-tip{ font-size:13px; color:#cbd5e1 }
-
-    /* D-Pad — ปุ่มซ้าย/ขวาติดขอบจอ */
-.dpad{
-  position: fixed;
-  bottom: max(20px, env(safe-area-inset-bottom) + 10px);
-  left: 0; right: 0;
-  display: none;                 /* เปิดเฉพาะจอเล็ก */
-  justify-content: space-between;/* ดันปุ่มไปซ้าย/ขวา */
-  padding: 0 20px;
-  z-index: 9999;
-  pointer-events: none;          /* ไม่บังการแตะส่วนอื่น */
-}
-.dpad .btn{
-  pointer-events: auto;          /* ให้ปุ่มรับการแตะได้ */
-  width: 64px; height: 64px;
-  border-radius: 50%;
-  font-size: 22px;
-  background: linear-gradient(145deg,#1a233b,#24324f);
-  border: 2px solid #6af0ff;
-  box-shadow: 0 0 12px #00eaff88;
-  transition: .2s;
-}
-.dpad .btn:active{
-  transform: scale(.9);
-  box-shadow: 0 0 20px #00ffffcc;
-}
-@media (max-width: 720px){
-  .dpad{ display:flex; }
-}
-
-
-    /* Modals */
-    .modal{position:fixed; inset:0; background:rgba(0,0,0,.65); display:none; align-items:center; justify-content:center; padding:16px; z-index:9000}
-    .modal.active{display:flex}
-    .modal .box{max-width:860px; width:100%; background:#0e1326; border:1px solid #2a2f45; border-radius:16px; padding:16px}
-    .qhead{font-size:18px; margin-bottom:8px}
-    .choice{display:block; width:100%; text-align:left; background:#121936; border:1px solid #2a3563; color:#e5e7eb; padding:12px 14px; border-radius:12px; margin:8px 0; cursor:pointer}
-    .choice:hover{filter:brightness(1.08)}
-    .dialog{font-size:16px; line-height:1.6}
-
-    .shop-grid{ display:grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap:12px }
-    .shop-card{ background:#111737; border:1px solid #2a2f45; border-radius:12px; padding:12px }
-    .shop-card h4{ margin:0 0 6px 0 }
-    .shop-price{ color:var(--gold); font-weight:800 }
-    .shop-owned{ color:#a7f3d0; font-size:13px }
-
-    .toast{position:fixed; bottom:16px; left:50%; transform:translateX(-50%); background:#0b1022; color:#c7d2fe; border:1px solid #39406a; border-radius:10px; padding:8px 12px; display:none; z-index:9999}
-    .toast.show{display:block}
-
-    /* ==== Mobile polish (drop-in patch) ==== */
-
-/* ป้องกัน iOS ย่อ/ขยายอักษรเอง */
-html { -webkit-text-size-adjust: 100%; }
-
-/* เผื่อ safe-area (รอยบาก/แถบล่าง) และหลบทูลบาร์ iOS */
-body {
-  padding-bottom: max(16px, env(safe-area-inset-bottom));
-  padding-top: max(0px, env(safe-area-inset-top));
-}
-
-/* HUD ให้ข้อความขึ้นบรรทัดใหม่ได้ ไม่ล้น */
-.stat { display:flex; justify-content:space-between; gap:6px; flex-wrap:wrap; }
-.stat > span { min-width: 0; }
-
-/* ปรับขนาดเวที/การ์ดบนจอเล็ก */
-@media (max-width: 640px) {
-  .container { padding: 12px; }
-  .stage { height: 280px; }
-  .panel { min-width: 100%; }   /* HUD ซ้อนเป็นคอลัมน์ */
-  .hud { gap: 10px; }
-
-  /* ปุ่มให้เรียงเป็นคอลัมน์ แตะง่ายขึ้น */
-  .actions { display:flex; flex-direction:column; gap:10px; }
-  .actions .btn { width:100%; padding:16px 18px; font-size:16px; }
-
-  /* บาร์พลังไม่ล้นขอบ */
-  .bar { height: 14px; }
-  .bar > span { will-change: width; }
-
-  /* เวิร์ดไทยยาวๆให้ตัดแถวได้ */
-  #enemyName, #playerNameLbl, .qhead, .choice {
-    word-break: break-word; overflow-wrap: anywhere;
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>CyberQuest: เกมภัยคอมพิวเตอร์ (Playable v7)</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --panel:#101935;
+    --panel-2:#162247;
+    --text:#ecf0ff;
+    --accent:#7c9cff;
+    --good:#35d07f;
+    --bad:#ff5d68;
+    --warn:#ffcf43;
+    --grid:#232f59;
   }
+  html,body{height:100%;}
+  body{
+    margin:0;
+    font-family: ui-sans-serif,system-ui,"Noto Sans Thai","Kanit",Segoe UI,Roboto,Helvetica,Arial;
+    background: radial-gradient(1200px 800px at 70% 20%, #151e3d 0%, var(--bg) 55%);
+    color:var(--text);
+    overflow:hidden;
+  }
+  .wrap{
+    display:grid;
+    grid-template-columns: 320px 1fr 380px;
+    grid-template-rows: 64px 1fr 84px;
+    grid-template-areas:
+      "header header header"
+      "left   board  right"
+      "footer footer footer";
+    height:100%;
+    gap:10px;
+    padding:10px;
+    box-sizing:border-box;
+  }
+  header{
+    grid-area:header;
+    background:linear-gradient(90deg,var(--panel),var(--panel-2));
+    border:1px solid #2a3a78;
+    border-radius:14px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:10px 16px;
+    box-shadow: 0 10px 22px rgba(0,0,0,.25) inset;
+  }
+  header h1{font-size:20px;margin:0;letter-spacing:.8px}
+  header .meta{display:flex;gap:8px;align-items:center}
+  .badge{font-size:12px;opacity:.9}
+  .chip{font-size:12px;padding:4px 8px;border:1px solid #3a4ca0;border-radius:999px;background:#0e1840;display:inline-flex;gap:6px;align-items:center}
+  .left{
+    grid-area:left;
+    background:linear-gradient(180deg,var(--panel),#0f1a3a);
+    border:1px solid #24306b;
+    border-radius:14px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .right{
+    grid-area:right;
+    background:linear-gradient(180deg,var(--panel),#0f1a3a);
+    border:1px solid #24306b;
+    border-radius:14px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .footer{
+    grid-area:footer;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    color:#c9d3ff;
+    font-size:12px;
+    opacity:.9;
+    padding:0 8px;
+  }
+  .board{
+    grid-area:board;
+    background:linear-gradient(180deg,#0f1a3a,var(--panel));
+    border:1px solid #24306b;
+    border-radius:14px;
+    padding:12px;
+    display:grid;
+    grid-template-rows:auto 1fr;
+    gap:12px;
+    position:relative;
+  }
+  .hud{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .hpbar{
+    background:#0a1330;
+    border:1px solid #22306b;
+    border-radius:10px;
+    height:14px;
+    width:100%;
+    position:relative;
+    overflow:hidden;
+  }
+  .hpbar > i{
+    display:block;height:100%;
+    background: linear-gradient(90deg,var(--good),#27a86b);
+    width:100%;
+    transition:width .25s ease;
+  }
+  .hpnum{font-size:12px;opacity:.9;margin-left:6px;min-width:62px;display:inline-block;text-align:right}
+  .row{display:flex;align-items:center;gap:8px}
+  .label{font-size:12px;opacity:.8}
+  .kbd{border:1px solid #3a4ca0;border-bottom-width:2px;background:#0c1333;border-radius:6px;padding:2px 6px;font-size:12px}
+  /* Map grid */
+  .grid{
+    --w:10; --h:8;
+    position:relative;
+    background:
+      linear-gradient(0deg, transparent 31px, var(--grid) 32px),
+      linear-gradient(90deg, transparent 31px, var(--grid) 32px);
+    background-size:32px 32px;
+    border:1px solid #2d3a72;
+    border-radius:12px;
+    overflow:hidden;
+    min-height: calc(32px * var(--h));
+    min-width: calc(32px * var(--w));
+    outline:none;
+  }
+  .player, .enemy{
+    position:absolute; width:32px; height:32px; display:grid; place-items:center;
+    transition: transform .18s ease;
+  }
+  .player{z-index:3}
+  .enemy{z-index:2}
+  .player .body{
+    width:24px;height:24px;border-radius:6px;background:#7c9cff;
+    box-shadow: 0 0 0 2px #24306b inset, 0 4px 10px rgba(0,0,0,.35);
+  }
+  .enemy .body{
+    width:24px;height:24px;border-radius:50%;
+    background: radial-gradient(circle at 30% 30%, #ff8ca1, #ff5d68);
+    box-shadow: 0 0 0 2px #5b1f25 inset, 0 4px 10px rgba(0,0,0,.35);
+  }
+  .marker{ position:absolute; inset:0; border:1px dashed #3a4ca0; border-radius:12px; pointer-events:none; opacity:.35 }
 
-  /* D-Pad ไม่โดนทับ ทูลบาร์ล่าง */
-  .dpad { bottom: max(16px, calc(env(safe-area-inset-bottom) + 8px)); }
-}
+  /* Items */
+  .item{ position:absolute; width:32px; height:32px; display:grid; place-items:center; z-index:1 }
+  .item .emoji{ font-size:18px; filter: drop-shadow(0 1px 0 rgba(0,0,0,.35)); }
 
-/* ปุ่มแชร์/ย้อนกลับของเบราว์เซอร์ที่ทับองค์ประกอบล่าง: เผื่อพื้นที่เพิ่มให้ปุ่มแอคชัน */
-.actions + .actions,
-.card:last-child { margin-bottom: 8px; }
+  /* Encounter / Quiz panel */
+  .encounter{
+    position:absolute; inset:auto 16px 16px 16px;
+    background:linear-gradient(180deg,#0e1840,#0d1438);
+    border:1px solid #33428e; border-radius:12px;
+    padding:12px; z-index:5; display:none;
+    box-shadow: 0 10px 30px rgba(0,0,0,.45);
+  }
+  .encounter.show{display:block;animation:pop .15s ease}
+  @keyframes pop{from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1}}
+  .q-title{font-size:14px;opacity:.9;margin:0 0 8px}
+  .q-text{font-size:16px;margin:0 0 10px}
+  .answers{display:grid; gap:8px}
+  .btn{
+    padding:8px 10px; border-radius:10px; border:1px solid #3a4ca0; background:#0d1438; color:var(--text);
+    font-size:14px; text-align:left; cursor:pointer;
+  }
+  .btn:hover{background:#121c49}
+  .btn.correct{border-color:#1f8f5c;background:rgba(53,208,127,.08)}
+  .btn.wrong{border-color:#9b2431;background:rgba(255,93,104,.08)}
+  .log{
+    height:160px; overflow:auto; border:1px solid #2c3a78; border-radius:10px; padding:8px; background:#0b1333;
+    font-size:13px; line-height:1.5
+  }
+  .log p{margin:.25rem 0}
+  .log .good{color:var(--good)}
+  .log .bad{color:var(--bad)}
+  .tiny{font-size:12px; opacity:.85}
+  .divider{height:1px;background:#26336e;margin:6px 0}
+  .credits{font-size:12px;opacity:.75}
+  .enemy-box, .hero-box{
+    background:#0c1536;border:1px solid #2e3b79;border-radius:12px;padding:10px
+  }
+  .startbtn{padding:8px 12px;border:1px solid #3a4ca0;border-radius:10px;background:#0e1840;color:var(--text);cursor:pointer}
+  .startbtn:active{transform:translateY(1px)}
 
-    }
+  /* Floating score text */
+  .floatScore{
+    position:absolute; left:50%; top:10px; transform:translateX(-50%);
+    padding:4px 8px; border-radius:10px; border:1px solid #335;
+    background:#0e1840cc; font-size:13px;
+    animation: rise 1s ease forwards;
+    pointer-events:none;
+  }
+  @keyframes rise{ from{opacity:0; transform:translate(-50%, 8px)} to{opacity:1; transform:translate(-50%, -4px)} }
 
-    /* FX */
-    .fx-layer{ position:absolute; inset:0; pointer-events:none; overflow:visible }
-    @keyframes dmgFloat { 0%{transform:translateY(0) scale(1);opacity:1} 100%{transform:translateY(-38px) scale(1.1);opacity:0} }
-    .float-dmg{ position:absolute; color:#ffe38a; font-weight:900; text-shadow:0 2px 8px rgba(0,0,0,.6); animation:dmgFloat 700ms ease-out forwards; user-select:none; }
-    .float-dmg.bad{ color:#ff8a8a } .float-dmg.good{ color:#8affb2 } .float-dmg.power{ color:#a78bfa; text-shadow:0 0 10px rgba(167,139,250,.9) }
-    @keyframes puff { 0%{transform:translate(0,0) scale(1);opacity:1} 100%{transform:translate(var(--dx),var(--dy)) scale(0.6);opacity:0} }
-    .particle{ position:absolute; width:8px; height:8px; border-radius:999px; background:#ffd166; box-shadow:0 0 10px rgba(255,209,102,.7); animation:puff 520ms ease-out forwards; }
-    @keyframes screenFlash { 0%{opacity:.0} 20%{opacity:.25} 100%{opacity:0} }
-    .flash{ position:absolute; inset:0; background:#fff; opacity:0; animation:screenFlash 420ms ease forwards; mix-blend-mode:screen; }
-    .stage-enter{ animation: stageFade 500ms ease forwards; }
-    @keyframes stageFade { 0%{opacity:0} 100%{opacity:1} }
-  </style>
+  /* Scoreboard Modal */
+  .modal{
+    position:absolute; inset:0; display:none; place-items:center; z-index:10;
+    background: rgba(0,0,0,.45);
+  }
+  .modal.show{display:grid}
+  .card{
+    width:min(560px, 92vw);
+    background:linear-gradient(180deg,#0e1840,#0d1438);
+    border:1px solid #33428e; border-radius:14px; padding:16px;
+    box-shadow: 0 20px 40px rgba(0,0,0,.55);
+  }
+  .card h2{margin:0 0 8px; font-size:20px}
+  .stat{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px dashed #2b3b7a}
+  .stat:last-child{border-bottom:none}
+</style>
 </head>
-<body class="theme-1">
-<div class="container">
-
-  <!-- START -->
-  <div id="screen-start" class="card">
-    <h1>Cyber Security BattleQuest <span class="badge">Final Build</span></h1>
-    <p class="muted">ไฟล์เดียว เล่นออฟไลน์ได้ | รองรับ PC + มือถือ (สแกน QR ได้) | เดิน A/D หรือ ◀ ▶</p>
-
-    <div class="row">
-      <div class="col card" style="background:rgba(110,231,255,.06)">
-        <h3>ข้อมูลผู้เล่น</h3>
-        <label for="playerName">ชื่อผู้เล่น</label>
-        <input id="playerName" type="text" placeholder="พิมพ์ชื่อ เช่น Beam / Mint / Guest" maxlength="20" />
-        <p class="muted" style="margin-top:8px">สถิติสูงสุด (เครื่องนี้): <b id="bestLabel">-</b></p>
-        <p class="muted" style="margin-top:4px">เครดิตสะสม: <b id="creditLabel">0</b> 🪙</p>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>🛡️ CyberQuest: เกมภัยคอมพิวเตอร์</h1>
+      <div class="meta">
+        <div class="badge">Playable v7 • High Score + สกอร์บอร์ด + ยา +40HP</div>
+        <span class="chip">🏆 สถิติสูงสุด <b id="highScore">0</b></span>
       </div>
-      <div class="col card">
-        <h3>เคล็ดลับเรียนรู้ไว (อ่าน 10 วิ)</h3>
-        <ul>
-          <li><b>ฟิชชิง</b>: หลีกเลี่ยงลิงก์/ไฟล์แนบแปลก ๆ → เข้าจากเว็บทางการเอง</li>
-          <li><b>รหัสผ่าน</b>: ใช้ยาว 12+ ตัว + 2FA + Password Manager</li>
-          <li><b>Wi‑Fi สาธารณะ</b>: เปิด VPN / หลีกเลี่ยงธุรกรรมสำคัญ</li>
-          <li><b>สำรองข้อมูล</b>: ทำ 3‑2‑1 และทดสอบกู้คืนบ้าง</li>
-          <li>ทุกข้อ <i>มีทิปอธิบายหลังตอบ</i> — ลุยได้เลย!</li>
-        </ul>
+    </header>
+
+    <aside class="left">
+      <div class="hero-box">
+        <div class="row">
+          <div class="label">ผู้เล่น (Hero)</div>
+          <span class="chip">เลเวล <b id="lv">1</b></span>
+          <span class="chip">คะแนนรวม <b id="score">0</b></span>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <div class="label">พลังชีวิต</div>
+          <div class="hpbar" style="max-width:180px"><i id="hpHero"></i></div>
+          <span class="hpnum" id="hpHeroText"></span>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <div class="label">เกราะ</div>
+          <span class="chip">🧩 ความรู้ภัยไซเบอร์: <b id="armor">0</b></span>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <div class="label">ไอเท็ม</div>
+          <span class="chip">💊 ยาเพิ่มเลือด: <b id="potions">0</b></span>
+          <button class="startbtn" id="btnUsePotion" title="ปุ่มลัด: E">ใช้ยา (E)</button>
+        </div>
       </div>
-    </div>
 
-    <div class="actions" style="margin-top:8px">
-      <button class="btn btn-accent" id="btnStart">เริ่มเกม</button>
-      <button class="btn" id="btnHow">ดูตัวอย่างคำถาม</button>
-    </div>
-  </div>
+      <div class="enemy-box">
+        <div class="row">
+          <div class="label">ศัตรู (Threat)</div>
+          <span class="chip">ประเภท <b id="enemyType">-</b></span>
+        </div>
+        <div class="row" style="margin-top:6px">
+          <div class="label">พลังชีวิต</div>
+          <div class="hpbar" style="max-width:180px"><i id="hpEnemy"></i></div>
+          <span class="hpnum" id="hpEnemyText"></span>
+        </div>
+      </div>
 
-  <!-- OVERWORLD -->
-  <div id="screen-over" class="card" style="display:none">
-    <div class="over-hud">
       <div>
-        ด่านถัดไป: <b id="nextStageLbl">1</b>
-        <span class="pill">ผู้เล่น: <b id="ovName">-</b></span>
-        <span class="pill">ไอเทม: Potion <b id="ovPot">0</b> | PowerUp <b id="ovPow">0</b></span>
-        <span class="pill">อุปกรณ์: ดาบ +<b id="ovSword">0</b> | เกราะ -<b id="ovArmor">0</b></span>
-      </div>
-      <div class="coin">เครดิต: <span id="creditsTxt">0</span> 🪙</div>
-    </div>
-    <div class="overwrap" id="overwrap">
-      <div class="strip" id="strip"></div>
-      <div class="walker2" id="walker2" style="display:none"></div>
-      <p class="over-tip">กด A/D หรือ ◀ ▶ เพื่อเดิน (มือถือใช้ D-Pad) • ถึงช่องสุดท้ายเพื่อเริ่มด่าน</p>
-    </div>
-    <div class="actions" style="margin-top:10px">
-      <button class="btn" id="btnToStart">กลับหน้าแรก</button>
-    </div>
-  </div>
-
-  <!-- BATTLE -->
-  <div id="screen-game" class="card" style="display:none">
-    <div class="hud">
-      <div class="panel">
-        <div class="stat"><span>ผู้เล่น: <b id="playerNameLbl">-</b></span> <span id="playerHpTxt">10/10</span></div>
-        <div class="bar" id="playerBar"><span style="width:100%"></span></div>
-        <div class="stat" style="margin-top:8px"><span>ไอเทม</span>
-          <span class="muted">Potion <b id="potNum">2</b> • PowerUp <b id="powNum">2</b></span>
+        <div class="row" style="justify-content:space-between">
+          <div class="label">บันทึกเหตุการณ์</div>
+          <span class="tiny" id="lastGain">+0</span>
         </div>
-        <div class="stat" style="margin-top:8px"><span>อุปกรณ์</span>
-          <span class="muted">ดาบ +<b id="gearSword">0</b> • เกราะ -<b id="gearArmor">0</b></span>
+        <div id="log" class="log"></div>
+      </div>
+    </aside>
+
+    <main class="board">
+      <div class="hud">
+        <div class="row">
+          <span class="chip">🎯 ตอบถูก: +5 คะแนน • ชนะศัตรู: +20~40 คะแนน</span>
+          <span class="chip">⭐ เคลียร์ 5 ครั้งเพื่อชนะเกม</span>
+        </div>
+        <div class="row tiny">
+          <span class="label">ควบคุม:</span>
+          <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span>
+          <span class="label">หรือ</span>
+          <span class="kbd">↑</span><span class="kbd">←</span><span class="kbd">↓</span><span class="kbd">→</span>
+          <span class="label">• ใช้ยา:</span><span class="kbd">E</span>
         </div>
       </div>
-      <div class="panel">
-        <div class="stat"><span>ด่าน <b id="stageNum">1</b> — <span id="enemyName">Scout Malware</span></span>
-          <span>ศัตรู HP <span id="enemyHpTxt">3/3</span></span></div>
-        <div class="bar bad" id="enemyBar"><span style="width:100%"></span></div>
-        <div class="stat" style="margin-top:8px"><span>คะแนน</span><span id="scoreTxt">0</span></div>
-        <div class="stat" style="margin-top:2px"><span>เครดิต</span><span id="battleCredits">0</span></div>
-      </div>
-    </div>
 
-    <div class="stage stage-enter">
-      <div class="entity player">
-        <div class="sprite hero" id="playerSprite">
-          <div class="face"></div>
-          <div class="eye left"></div><div class="eye right"></div>
-          <div class="visor"></div><div class="deco"></div><div class="emblem"></div>
-          <div class="mouth"></div>
+      <div class="grid" id="grid" tabindex="0" aria-label="พื้นที่เกม ใช้ปุ่มทิศทางเพื่อเคลื่อนที่">
+        <div class="marker"></div>
+        <div id="itemsLayer"></div>
+        <div class="player" id="player"><div class="body" title="ผู้เล่น"></div></div>
+        <div class="enemy" id="enemy" style="display:none"><div class="body" title="ศัตรู"></div></div>
+
+        <div class="encounter" id="encounter">
+          <p class="q-title">การเผชิญหน้า: <b id="encType">ภัยไซเบอร์</b></p>
+          <p class="q-text" id="question">คำถามจะแสดงตรงนี้</p>
+          <div class="answers" id="answers"></div>
         </div>
       </div>
-      <div class="entity enemy">
-        <div class="sprite enemy-scout" id="enemySprite">
-          <div class="face"></div>
-          <div class="eye left"></div><div class="eye right"></div>
-          <div class="mouth"></div>
+      <div id="floatLayer"></div>
+
+      <!-- Scoreboard Modal -->
+      <div id="scoreModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="scoreTitle">
+        <div class="card">
+          <h2 id="scoreTitle">🏆 สรุปผลเกม</h2>
+          <div class="stat"><span>สถานะ</span><b id="scStatus">-</b></div>
+          <div class="stat"><span>คะแนนรวม</span><b id="scScore">0</b></div>
+          <div class="stat"><span>สถิติสูงสุด</span><b id="scBest">0</b></div>
+          <div class="stat"><span>ชนะศัตรู</span><b id="scClears">0</b></div>
+          <div class="stat"><span>ตอบถูก</span><b id="scCorrect">0</b></div>
+          <div class="stat"><span>ตอบผิด</span><b id="scWrong">0</b></div>
+          <div class="stat"><span>ใช้ยา</span><b id="scPotionsUsed">0</b></div>
+          <div class="stat"><span>เวลาเล่น</span><b id="scTime">0:00</b></div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+            <button class="startbtn" id="btnClearHS">ล้างสถิติสูงสุด</button>
+            <button class="startbtn" id="btnPlayAgain">เล่นใหม่</button>
+          </div>
         </div>
       </div>
-      <div class="ground"></div>
-      <div id="fxLayer" class="fx-layer"></div>
-    </div>
+    </main>
 
-    <div class="card" style="margin-top:12px">
-      <div class="actions">
-        <button class="btn btn-accent" id="btnAttack">โจมตี (ตอบคำถาม)</button>
-        <button class="btn" id="btnPotion">ใช้ Potion +5 (ต้องตอบถูก)</button>
-        <button class="btn" id="btnPower">ใช้ Power-Up +2 (ต้องตอบถูก)</button>
-        <span class="pill">บัฟครั้งถัดไป: <b id="buffTxt">+0</b></span>
-        <button class="btn" id="btnRetreat" style="margin-left:auto">ถอยกลับ</button>
+    <aside class="right">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div class="label">เครื่องมือ</div>
+        <div class="row" style="gap:8px">
+          <button class="startbtn" id="btnFocus">โฟกัสแผนที่</button>
+          <button class="startbtn" id="btnReset">เริ่มใหม่</button>
+        </div>
       </div>
+      <div class="divider"></div>
+      <div class="label">แป้นควบคุมบนหน้าจอ (D-Pad)</div>
+      <div class="row" style="gap:10px;flex-wrap:wrap">
+        <button class="startbtn" id="btnUp">▲</button>
+        <div class="row" style="gap:10px">
+          <button class="startbtn" id="btnLeft">◀</button>
+          <button class="startbtn" id="btnDown">▼</button>
+          <button class="startbtn" id="btnRight">▶</button>
+        </div>
+      </div>
+      <p class="tiny">💊 เดินเก็บยาเพิ่มเลือดบนแผนที่ หรือได้จากการชนะศัตรู (ฟื้น +40HP)</p>
+      <div class="divider"></div>
+      <div class="credits">สร้างโดย ChatGPT • โหมดสาธิตเพื่อการศึกษา</div>
+    </aside>
+
+    <div class="footer">
+      <div>เดินสำรวจ เก็บยา ตอบคำถามให้ถูกเพื่อทำดาเมจ • ใช้ยา (E) เพื่อฟื้น HP +40</div>
+      <div class="tiny">คลิกพื้นที่แผนที่เพื่อโฟกัสคีย์บอร์ด หรือใช้ D-Pad</div>
     </div>
   </div>
-
-  <!-- END -->
-  <div id="screen-end" class="card" style="display:none">
-    <h2 id="endTitle">จบเกม</h2>
-    <p id="endMsg" class="muted"></p>
-    <p class="muted">สถิติสูงสุด (เครื่องนี้): <b id="bestFinal">-</b></p>
-    <div class="actions">
-      <button class="btn btn-accent" id="btnRestart">เล่นอีกครั้ง</button>
-      <button class="btn" id="btnBackOver">กลับสู่แผงสำรวจ</button>
-    </div>
-  </div>
-</div>
-
-<!-- D-Pad -->
-<div class="dpad">
-  <button class="btn" id="padLeft">◀</button>
-  <button class="btn" id="padRight">▶</button>
-</div>
-
-<!-- Question Modal -->
-<div id="modal" class="modal">
-  <div class="box card">
-    <div class="qhead" id="qText">คำถาม</div>
-    <div id="choices"></div>
-    <p id="tip" class="muted"></p>
-  </div>
-</div>
-
-<!-- Shop Modal -->
-<div id="shopModal" class="modal">
-  <div class="box card">
-    <div class="over-hud" style="margin-bottom:12px">
-      <h3 style="margin:0">🛒 ร้านค้า (ด่าน 4 ก่อนบอส)</h3>
-      <div class="coin">เครดิต: <span id="shopCredits">0</span> 🪙</div>
-    </div>
-    <div class="shop-grid">
-      <div class="shop-card">
-        <h4>Potion +5 HP</h4>
-        <p class="muted">ยาฟื้นพลัง ใช้ในไฟต์ (ต้องตอบถูก)</p>
-        <p class="shop-price">25 🪙</p>
-        <button class="btn" data-buy="potion">ซื้อ Potion</button>
-      </div>
-      <div class="shop-card">
-        <h4>Power-Up +2</h4>
-        <p class="muted">บัฟโจมตีครั้งถัดไป +2 (ต้องตอบถูก)</p>
-        <p class="shop-price">25 🪙</p>
-        <button class="btn" data-buy="power">ซื้อ Power-Up</button>
-      </div>
-      <div class="shop-card">
-        <h4>ดาบ (Sword)</h4>
-        <p class="muted">อาวุธถาวร เพิ่มดาเมจ +3</p>
-        <p class="shop-price">120 🪙</p>
-        <p id="ownSword" class="shop-owned" style="display:none">เป็นเจ้าของแล้ว</p>
-        <button class="btn" data-buy="sword">ซื้อดาบ</button>
-      </div>
-      <div class="shop-card">
-        <h4>เกราะ (Armor)</h4>
-        <p class="muted">ลดดาเมจที่ได้รับ -1 (ขั้นต่ำยังเสีย 1)</p>
-        <p class="shop-price">120 🪙</p>
-        <p id="ownArmor" class="shop-owned" style="display:none">เป็นเจ้าของแล้ว</p>
-        <button class="btn" data-buy="armor">ซื้อเกราะ</button>
-      </div>
-    </div>
-    <div class="actions" style="margin-top:10px">
-      <button class="btn btn-accent" id="closeShop">ปิดร้าน</button>
-    </div>
-  </div>
-</div>
-
-<!-- Dialog Modal (mini story) -->
-<div id="dialogModal" class="modal">
-  <div class="box card">
-    <div class="dialog" id="dialogText">...</div>
-    <div class="actions" style="margin-top:12px">
-      <button class="btn btn-accent" id="dialogOk">ตกลง</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast" class="toast">ข้อความ</div>
 
 <script>
-  /* ===== Config ===== */
-  const stages=[
-    {name:'Scout Malware',hp:3,boss:false, css:'enemy-scout', intro:"สัญญาณผิดปกติในเครือข่าย… เริ่มสแกนภัยเบื้องต้น!", outtro:"ทำได้ดี! ภัยระดับต้นถูกกำจัดแล้ว"},
-    {name:'Phishling Rogue',hp:4,boss:false, css:'enemy-phish', intro:"มีเหยื่อล่อฟิชชิงกำลังระบาด — ระวังลิงก์ปลอม!", outtro:"ยอดเยี่ยม! ทีมผู้ใช้รอดจากเหยื่อล่อ"},
-    {name:'FakeNews Wraith',hp:4,boss:false, css:'enemy-fake', intro:"ข่าวปลอมป่วนระบบสื่อสาร — ตรวจสอบแหล่งที่มาก่อนแชร์!", outtro:"ข้อมูลสะอาดแล้ว สังคมปลอดข่าวปลอมขึ้น"},
-    {name:'OpenWiFi Specter',hp:4,boss:false, css:'enemy-wifi', intro:"เครือข่ายสาธารณะไร้การป้องกัน — เปิด VPN และระวังข้อมูล!", outtro:"ปลอดภัย! เราคุมเครือข่ายให้เข้มแข็งขึ้น"},
-    {name:'Overlord Ransom (BOSS)',hp:10,boss:true, css:'boss-ransom', intro:"บอสเรียกค่าไถ่บุก! สำรองข้อมูลพร้อม — ห้ามยอมแพ้!", outtro:"ชัยชนะ! ไฟล์สำคัญถูกปกป้อง ระบบปลอดภัยแล้ว"}
-  ];
-  const PLAYER_MAX_HP=10,DMG_WRONG_NORMAL=1,DMG_WRONG_BOSS=2,POTION_HEAL=5,POWER_BONUS=2;
-  const OVER_STEPS=7;
-  const REWARD_PER_DMG=10, REWARD_STAGE_CLEAR=30;
-  const PRICE = { potion:25, power:25, sword:120, armor:120 };
-  /* ===== LocalStorage Keys ===== */
-  const LS_NAME='cd2_name', LS_BEST='cd2_best', LS_BEST_NAME='cd2_best_name', LS_CRED='cd2_credits', LS_GEAR='cd2_gear';
+/* ===========================
+   CORE GAME STATE
+=========================== */
+const gridEl = document.getElementById('grid');
+const itemsLayer = document.getElementById('itemsLayer');
+const floatLayer = document.getElementById('floatLayer');
+const playerEl = document.getElementById('player');
+const enemyEl = document.getElementById('enemy');
+const encounterEl = document.getElementById('encounter');
+const qText = document.getElementById('question');
+const answersEl = document.getElementById('answers');
+const logEl = document.getElementById('log');
 
-  /* ===== State ===== */
-  const state={
-    stageIndex:0, enemyHp:stages[0].hp, playerHp:PLAYER_MAX_HP,
-    potion:2, power:2, nextAttackBonus:0, score:0, action:null,
-    askedIds:new Set(), questions:[],
-    playerName:'', credits:0, gear:{ sword:0, armor:0 },
-    overPos:0
-  };
+const hpHeroBar = document.getElementById('hpHero');
+const hpHeroText = document.getElementById('hpHeroText');
+const hpEnemyBar = document.getElementById('hpEnemy');
+const hpEnemyText = document.getElementById('hpEnemyText');
+const enemyTypeEl = document.getElementById('enemyType');
+const encTypeEl = document.getElementById('encType');
+const scoreEl = document.getElementById('score');
+const lvEl = document.getElementById('lv');
+const armorEl = document.getElementById('armor');
+const potionsEl = document.getElementById('potions');
+const lastGainEl = document.getElementById('lastGain');
+const btnReset = document.getElementById('btnReset');
+const btnFocus = document.getElementById('btnFocus');
+const btnUsePotion = document.getElementById('btnUsePotion');
 
-  /* ===== WebAudio SFX ===== */
-  let audioCtx=null;
-  function ensureAudio(){ if(!audioCtx){ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); } }
-  function beep({freq=440, type='sine', dur=0.08, vol=0.2, slide=0}){
-    if(!audioCtx) return;
-    const o=audioCtx.createOscillator(), g=audioCtx.createGain();
-    o.type=type; o.frequency.value=freq;
-    g.gain.value=0;
-    o.connect(g).connect(audioCtx.destination);
-    const now=audioCtx.currentTime;
-    // simple envelope
-    g.gain.linearRampToValueAtTime(vol, now+0.01);
-    g.gain.linearRampToValueAtTime(0.001, now+Math.max(0.02, dur));
-    if(slide){ o.frequency.exponentialRampToValueAtTime(Math.max(40,freq+slide), now+dur); }
-    o.start(now); o.stop(now+dur+0.02);
+// Scoreboard els
+const scoreModal = document.getElementById('scoreModal');
+const scStatus = document.getElementById('scStatus');
+const scScore = document.getElementById('scScore');
+const scBest = document.getElementById('scBest');
+const scClears = document.getElementById('scClears');
+const scCorrect = document.getElementById('scCorrect');
+const scWrong = document.getElementById('scWrong');
+const scPotionsUsed = document.getElementById('scPotionsUsed');
+const scTime = document.getElementById('scTime');
+const btnPlayAgain = document.getElementById('btnPlayAgain');
+const btnClearHS = document.getElementById('btnClearHS');
+
+// D-pad
+const btnUp = document.getElementById('btnUp');
+const btnDown = document.getElementById('btnDown');
+const btnLeft = document.getElementById('btnLeft');
+const btnRight = document.getElementById('btnRight');
+
+// Map size
+const W = 10, H = 8;     // grid cells
+const TILE = 32;
+
+// Config
+const SCORE_CORRECT = 5;
+const HEAL_PER_POTION = 40; // per request
+const POTION_DROP_CHANCE = 0.6;
+
+// High Score (LocalStorage)
+const HS_KEY = 'cq_highscore_v7';
+let highScore = 0;
+function loadHighScore(){
+  const v = Number(localStorage.getItem(HS_KEY));
+  return Number.isFinite(v) ? v : 0;
+}
+function saveHighScore(v){
+  try{ localStorage.setItem(HS_KEY, String(v)); }catch(e){}
+}
+function updateHSUI(){
+  const el = document.getElementById('highScore');
+  if(el) el.textContent = highScore;
+}
+
+// Player
+let player = { x: 1, y: 1, hp: 100, hpMax: 100, armor: 0, level: 1, score: 0, potions: 0 };
+// Enemy
+let enemy = null;
+// Progress
+let cleared = 0; // encounters cleared
+const toWin = 5;
+
+// Random tiles that trigger encounters
+let hazards;
+// Potion items on map
+let potionSpots; // Set of "x,y" strings
+
+// Stats
+let correctCount = 0;
+let wrongCount = 0;
+let potionsUsed = 0;
+let startTime = Date.now();
+
+// Questions bank (~40)
+const QUESTIONS = [
+  // ฟิชชิ่ง
+  {cat:"ฟิชชิ่ง", q:"อีเมลไหน 'น่าเชื่อถือที่สุด'?", a:[
+    "แจ้งล็อกอินผิดปกติ มีลิงก์โดเมนบริษัทจริงและมี HTTPS",
+    "แจ้งถูกลอตเตอรี่ พร้อมให้กรอกเลขบัตรประชาชน",
+    "ขอรหัสผ่านทันทีเพื่อยืนยันตัวตน",
+    "ไฟล์แนบ .exe จากคนไม่รู้จัก"], correct:0},
+  {cat:"ฟิชชิ่ง", q:"ข้อใดบ่งชี้ว่าเป็นฟิชชิ่งได้ดีที่สุด", a:[
+    "โดเมนคล้ายกันแต่สะกดผิด เช่น facelook.com",
+    "มีโลโก้สวยงาม",
+    "มีลิงก์สั้น bit.ly",
+    "ส่งตอนกลางคืน"], correct:0},
+  {cat:"ฟิชชิ่ง", q:"ควรทำอย่างไรเมื่อสงสัยว่าอีเมลเป็นฟิชชิ่ง", a:[
+    "คลิกลิงก์เพื่อดูว่าใช่จริงไหม",
+    "กรอกข้อมูลให้เร็วจะได้จบ",
+    "ติดต่อเจ้าหน้าที่ผ่านช่องทางทางการที่เรารู้จักเอง",
+    "ส่งต่อให้เพื่อนลองก่อน"], correct:2},
+
+  // รหัสผ่าน
+  {cat:"รหัสผ่าน", q:"รหัสผ่านที่ปลอดภัยควรยาวกี่ตัวอักษรขึ้นไป (โดยทั่วไป)", a:["4","6","8","12+"], correct:3},
+  {cat:"รหัสผ่าน", q:"การใช้รหัสผ่านซ้ำในหลายบริการมีความเสี่ยงเพราะอะไร", a:[
+    "จำง่ายเกินไป",
+    "หากเว็บหนึ่งรั่วไหล แฮกเกอร์จะลองใช้กับเว็บอื่นได้",
+    "ทำให้เครื่องช้า",
+    "ทำให้ลืม"], correct:1},
+  {cat:"รหัสผ่าน", q:"วิธีจัดการรหัสผ่านที่แนะนำคือ", a:[
+    "จดโพสต์อิทแปะจอ",
+    "ใช้ตัวจัดการรหัสผ่าน (Password Manager)",
+    "ให้เพื่อนจำแทน",
+    "ใช้รูปแบบเดิมเปลี่ยนเลขท้าย"], correct:1},
+
+  // 2FA
+  {cat:"2FA", q:"2FA ที่ปลอดภัยกว่ากันระหว่าง", a:[
+    "SMS OTP",
+    "แอป authenticator / ฮาร์ดแวร์คีย์",
+    "ส่งรหัสผ่านทางอีเมล",
+    "คำถามความปลอดภัย"], correct:1},
+  {cat:"2FA", q:"สถานการณ์ใด 'ไม่ใช่' 2FA", a:[
+    "ใส่รหัสผ่าน + รับรหัสจากแอป",
+    "ใส่รหัสผ่าน + สแกนลายนิ้วมือ",
+    "ใส่รหัสผ่านอย่างเดียว",
+    "ใส่รหัสผ่าน + ฮาร์ดแวร์คีย์"], correct:2},
+
+  // มัลแวร์/แรนซัมแวร์
+  {cat:"มัลแวร์", q:"วิธีลดโอกาสติดมัลแวร์ที่ดีที่สุดคือ", a:[
+    "ดาวน์โหลดซอฟต์แวร์จากแหล่งทางการ",
+    "ปิดอัปเดตทั้งหมด",
+    "ปิดแอนตี้ไวรัส",
+    "ปิดไฟร์วอลล์"], correct:0},
+  {cat:"แรนซัมแวร์", q:"หากโดนแรนซัมแวร์ สิ่งใดช่วยให้ฟื้นตัวเร็วที่สุด", a:[
+    "จ่ายค่าไถ่",
+    "มีแบ็กอัปออฟไลน์และแผนกู้คืน",
+    "ปิดเครื่องหนี",
+    "โพสต์ขอความช่วยเหลือในโซเชียล"], correct:1},
+  {cat:"มัลแวร์", q:"ไฟล์แนบ/นามสกุลใดควรระวังเป็นพิเศษ", a:[".docx",".pdf",".jpg",".exe"], correct:3},
+
+  // Wi-Fi สาธารณะ
+  {cat:"Wi-Fi สาธารณะ", q:"ควรทำอะไรเมื่อจำเป็นต้องใช้ Wi-Fi สาธารณะ", a:[
+    "เข้าธนาคารให้เสร็จ",
+    "ใช้ VPN และหลีกเลี่ยงธุรกรรมสำคัญ",
+    "ปิดการเข้ารหัส",
+    "แชร์พาสเวิร์ดให้เพื่อน"], correct:1},
+  {cat:"Wi-Fi สาธารณะ", q:"สัญญาณเตือนอันตรายใน Wi‑Fi ฟรีคือ", a:[
+    "ชื่อตรงกับสถานที่",
+    "ขอรหัสผ่านจากพนักงาน",
+    "ชื่อเครือข่ายคล้ายกันหลายอัน เช่น FREE_WIFI_1, FREE_WIFI_2",
+    "มีสัญญาณแรง"], correct:2},
+
+  // โซเชียล/ความเป็นส่วนตัว
+  {cat:"โซเชียล", q:"โพสต์ใดเสี่ยงต่อความเป็นส่วนตัว", a:[
+    "รูปวิวธรรมชาติ",
+    "บัตรประชาชนปิดไว้ครึ่งเดียว",
+    "รีวิวอาหาร",
+    "รูปสัตว์เลี้ยง"], correct:1},
+  {cat:"โซเชียล", q:"การตั้งค่าใดปลอดภัยกว่า", a:[
+    "สาธารณะทั้งหมด",
+    "เฉพาะเพื่อน/กำหนดกลุ่มผู้ชม",
+    "แชร์ตำแหน่งแบบเรียลไทม์ตลอดเวลา",
+    "ยอมรับเพื่อนทุกคน"], correct:1},
+
+  // อัปเดต/แพตช์
+  {cat:"อัปเดต", q:"เหตุผลสำคัญของการอัปเดตซอฟต์แวร์คือ", a:[
+    "เพิ่มฟีเจอร์เท่านั้น",
+    "อุดช่องโหว่ความปลอดภัย",
+    "ทำให้เครื่องช้า",
+    "เปลี่ยนธีม"], correct:1},
+  {cat:"อัปเดต", q:"ควรอัปเดตอะไรบ้าง", a:[
+    "เฉพาะระบบปฏิบัติการ",
+    "เฉพาะแอปที่ใช้บ่อย",
+    "ระบบปฏิบัติการและแอป/ปลั๊กอินสำคัญ",
+    "ไม่ต้องอัปเดต"], correct:2},
+
+  // แบ็กอัป/กู้คืน
+  {cat:"แบ็กอัป", q:"แนวทางแบ็กอัปที่ดีคือ 3‑2‑1 หมายถึง", a:[
+    "3 วันครั้ง 2 ไฟล์ 1 โฟลเดอร์",
+    "3 ชุดข้อมูล 2 สื่อเก็บ 1 ชุดเก็บไว้นอกสถานที่",
+    "3 ผู้ใช้ 2 สิทธิ์ 1 ผู้ดูแล",
+    "3 คลาวด์ 2 พีซี 1 มือถือ"], correct:1},
+  {cat:"แบ็กอัป", q:"ควรทดสอบแบ็กอัปอย่างไร", a:[
+    "เก็บไว้เฉย ๆ",
+    "ลองกู้คืนเป็นระยะเพื่อพิสูจน์ว่าใช้ได้จริง",
+    "กดเช็กไฟล์อย่างเดียว",
+    "ไม่จำเป็น"], correct:1},
+
+  // วิศวกรรมสังคม/สแกม
+  {cat:"วิศวกรรมสังคม", q:"ตัวอย่าง Social Engineering คือ", a:[
+    "ปลอมเป็นเจ้าหน้าที่ IT ขอรหัสผ่าน",
+    "เปลี่ยนรหัสผ่านเป็นประจำ",
+    "เข้ารหัสข้อมูล",
+    "อัปเดตแพตช์"], correct:0},
+  {cat:"สแกม", q:"“งานพาร์ทไทม์รายได้สูงโอนก่อน” จัดเป็น", a:[
+    "ข้อเสนอปกติ",
+    "ฟิชชิ่งแบบโทร/แชต (vishing/smishing)",
+    "บริการถูกกฎหมาย",
+    "เกม"], correct:1},
+  {cat:"สแกม", q:"แนวทางที่ปลอดภัยเมื่อมีคนทักมาขอ OTP", a:[
+    "ให้ไปก่อน เดี๋ยวค่อยเปลี่ยน",
+    "ไม่ให้เด็ดขาดและรายงานบัญชี/เบอร์",
+    "ให้เฉพาะกลางวัน",
+    "ให้ถ้ารู้จักชื่อเล่น"], correct:1},
+
+  // ชำระเงิน/ออนไลน์แบงก์กิ้ง
+  {cat:"ชำระเงิน", q:"วิธีชำระเงินที่ปลอดภัยกว่าคือ", a:[
+    "โอนล่วงหน้าไปบัญชีส่วนตัวที่ไม่เคยรู้จัก",
+    "ใช้แพลตฟอร์มที่มีคุ้มครองผู้ซื้อ/ตะกร้าสินค้า",
+    "ส่งเงินสดทางไปรษณีย์",
+    "ให้รหัสบัตรทางแชต"], correct:1},
+  {cat:"ชำระเงิน", q:"หากเว็บชำระเงินไม่เป็น HTTPS ควร", a:[
+    "ชำระต่อได้เลย",
+    "เปลี่ยนเครือข่าย",
+    "หยุดทำรายการทันที",
+    "รีเฟรชหน้า"], correct:2},
+
+  // คลาวด์/ข้อมูล
+  {cat:"คลาวด์", q:"การแชร์ไฟล์คลาวด์แบบปลอดภัยควร", a:[
+    "ตั้งสาธารณะทุกไฟล์",
+    "แชร์เฉพาะรายชื่อ/อีเมลที่ต้องการ พร้อมสิทธิ์ที่เหมาะสม",
+    "ส่งลิงก์ในที่สาธารณะ",
+    "แนบรหัสผ่านในชื่อไฟล์"], correct:1},
+  {cat:"ข้อมูล", q:"ข้อมูลส่วนบุคคลที่ควรรักษาอย่างเข้มงวดคือ", a:[
+    "ชื่อเล่น",
+    "เลขบัตรประชาชน/เลขพาสปอร์ต",
+    "สีที่ชอบ",
+    "อาหารโปรด"], correct:1},
+
+  // AI/ดีพเฟก/สื่อ
+  {cat:"AI/ดีพเฟก", q:"หากสงสัยวิดีโอเป็นดีพเฟก ควร", a:[
+    "แชร์ต่อทันที",
+    "ตรวจแหล่งข่าวอื่น/เช็กความผิดปกติของปาก/เงา/เสียง",
+    "เชื่อถ้าคนดังพูด",
+    "วัดจากยอดวิว"], correct:1},
+  {cat:"AI/ดีพเฟก", q:"ตัวอย่างการใช้ AI อย่างรับผิดชอบคือ", a:[
+    "ให้ AI เขียนข้อมูลเท็จ",
+    "เครดิตแหล่งที่มาและตรวจทานความถูกต้อง",
+    "คัดลอกผลงานคนอื่น",
+    "ปั่นข่าว"], correct:1},
+
+  // IoT
+  {cat:"IoT", q:"อุปกรณ์ IoT ใหม่ควรทำสิ่งใดก่อนใช้งาน", a:[
+    "ใช้รหัสผ่านโรงงานเดิม",
+    "เปลี่ยนรหัสผ่านเริ่มต้นและอัปเดตเฟิร์มแวร์",
+    "ปิดการอัปเดต",
+    "เปิดพอร์ตทั้งหมด"], correct:1},
+  {cat:"IoT", q:"การแยกเครือข่ายสำหรับ IoT มีประโยชน์เพราะ", a:[
+    "ทำให้เน็ตแรงขึ้นเท่านั้น",
+    "ลดความเสียหายหากอุปกรณ์ตัวหนึ่งถูกโจมตี",
+    "สิ้นเปลือง",
+    "ใช้ไม่ได้กับ Wi‑Fi"], correct:1},
+
+  // อีเมล/แนบไฟล์/ลิงก์
+  {cat:"อีเมล", q:"ก่อนกดลิงก์ในอีเมลควร", a:[
+    "วางเมาส์ดู URL จริง",
+    "กดทันที",
+    "ส่งต่อให้ทุกคน",
+    "ตอบกลับด้วยข้อมูลส่วนตัว"], correct:0},
+  {cat:"อีเมล", q:"หากได้รับไฟล์แนบจากคนแปลกหน้า", a:[
+    "เปิดทันที",
+    "อัปโหลดไปเว็บไม่รู้จัก",
+    "สแกนไวรัส/เปิดในสภาพแวดล้อมปลอดภัยก่อน",
+    "ตอบกลับขอข้อมูลเพิ่มเติมแล้วเปิด"], correct:2},
+
+  // นโยบาย/สิทธิ์
+  {cat:"สิทธิ์แอป", q:"สิทธิ์ใดควรถามว่าจำเป็นไหมเมื่อแอปขอ", a:[
+    "กล้อง/ไมค์ ทั้งที่เป็นแอปไฟฉาย",
+    "พื้นที่จัดเก็บสำหรับแอปกล้อง",
+    "ตำแหน่งสำหรับแผนที่",
+    "การแจ้งเตือนสำหรับแชต"], correct:0},
+  {cat:"สิทธิ์แอป", q:"แนวทางให้สิทธิ์แอปที่ปลอดภัยคือ", a:[
+    "ให้ทุกสิทธิ์เพื่อจบ ๆ",
+    "ให้เท่าที่จำเป็น และ “อนุญาตเฉพาะขณะใช้งาน” เมื่อทำได้",
+    "ไม่ให้สิทธิ์ใด ๆ เลย",
+    "ให้สิทธิ์ถาวรทุกตัว"], correct:1},
+
+  // รหัส OTP/ความปลอดภัยบัญชี
+  {cat:"บัญชี", q:"ข้อใดช่วยป้องกันการยึดบัญชีได้ดีที่สุด", a:[
+    "ใช้รหัสผ่านยาวและไม่ซ้ำ + เปิด 2FA",
+    "ใช้รหัสผ่านสั้นแต่จำง่าย",
+    "แชร์รหัสกับเพื่อนสนิท",
+    "ปิดแจ้งเตือน"], correct:0},
+  {cat:"บัญชี", q:"หากได้รับ OTP โดยที่ไม่ได้พยายามเข้าสู่ระบบ", a:[
+    "บอกรหัสให้เพื่อน",
+    "เพิกเฉยและตรวจสอบประวัติเข้าสู่ระบบ/เปลี่ยนรหัสผ่าน",
+    "โพสต์ลงโซเชียล",
+    "ส่งต่อให้คนขอ"], correct:1},
+
+  // กฎหมาย/ลิขสิทธิ์
+  {cat:"ลิขสิทธิ์", q:"การดาวน์โหลดซอฟต์แวร์เถื่อนเสี่ยงเพราะ", a:[
+    "อาจมีมัลแวร์และผิดกฎหมาย",
+    "ถูกกว่า",
+    "เร็วกว่าของแท้",
+    "ได้คะแนน"], correct:0},
+  {cat:"ลิขสิทธิ์", q:"เฟิร์มแวร์ดัดแปลง (crack) มักมีความเสี่ยงคือ", a:[
+    "ความปลอดภัยลดลง/ช่องโหว่",
+    "แบตทนขึ้น",
+    "รับประกันเพิ่ม",
+    "เป็นมาตรฐาน"], correct:0},
+
+  // Cloud/สำรองเวอร์ชัน
+  {cat:"คลาวด์", q:"การเปิด Versioning บนคลาวด์มีประโยชน์เพราะ", a:[
+    "ย้อนเวอร์ชันไฟล์เมื่อถูกแก้ไข/เข้ารหัสโดยมัลแวร์",
+    "เพิ่มความจุทันที",
+    "ลดค่าใช้จ่าย",
+    "ปิดการเข้ารหัส"], correct:0},
+
+  // นโยบายองค์กร
+  {cat:"องค์กร", q:"ในที่ทำงาน ควรส่งข้อมูลสำคัญผ่าน", a:[
+    "ไอจีส่วนตัว",
+    "ช่องทางที่องค์กรกำหนดและเข้ารหัส",
+    "เมลส่วนตัว",
+    "กลุ่มไลน์รวมเพื่อน"], correct:1},
+  {cat:"องค์กร", q:"เมื่อพบ USB ไม่รู้ที่มาในออฟฟิศ ควร", a:[
+    "เสียบทันทีเพื่อดูเจ้าของ",
+    "ส่งให้ฝ่าย IT ตรวจสอบ",
+    "นำกลับบ้าน",
+    "แจกเพื่อน"], correct:1},
+
+  // เพิ่มเติมเพื่อให้ครบใกล้ 40
+  {cat:"เบราว์เซอร์", q:"ปลั๊กอินเบราว์เซอร์ที่ไม่จำเป็นควร", a:[
+    "ติดตั้งเยอะ ๆ",
+    "ถอน/ปิดใช้ ถ้าไม่จำเป็น",
+    "เก็บไว้เผื่อใช้",
+    "เปิดสิทธิ์เต็ม"], correct:1},
+  {cat:"ความเป็นส่วนตัว", q:"การใช้โหมดไม่ระบุตัวตน (Incognito) จะ", a:[
+    "ทำให้เป็นนิรนามสมบูรณ์",
+    "ไม่บันทึกประวัติในเครื่อง แต่ยังเห็นได้จากเครือข่าย/ผู้ให้บริการ",
+    "เข้ารหัสทุกอย่าง",
+    "บล็อกโฆษณาทั้งหมด"], correct:1},
+  {cat:"อุปกรณ์พกพา", q:"การตั้งค่าที่ควรเปิดบนมือถือคือ", a:[
+    "ล็อกหน้าจอด้วย PIN/ไบโอเมตริก",
+    "ติดป้ายชื่อบนหน้าจอ",
+    "ปล่อยแอปติดตั้งจากนอกสโตร์อิสระ",
+    "ปิดอัปเดตทั้งหมด"], correct:0}
+];
+
+// Used question indexes to reduce repeats across the run
+let usedQuestions = new Set();
+
+function rand(min,max){return Math.floor(Math.random()*(max-min+1))+min}
+
+// pick a question with optional exclusion index to discourage repeats; avoid global repeats
+function pickQuestion(excludeIdx = -1){
+  if(usedQuestions.size >= QUESTIONS.length - 1){
+    // reset but keep current excluded to allow rotation
+    usedQuestions.clear();
   }
-  const sfx={
-    correct(){ beep({freq:740,type:'sine',dur:.06,vol:.22}); beep({freq:980,type:'sine',dur:.08,vol:.18}); },
-    wrong(){ beep({freq:220,type:'sawtooth',dur:.12,vol:.22,slide:-120}); },
-    power(){ beep({freq:520,type:'triangle',dur:.08,vol:.2}); },
-    heal(){ beep({freq:420,type:'triangle',dur:.06,vol:.18}); beep({freq:560,type:'triangle',dur:.08,vol:.16}); },
-    hit(){ beep({freq:280,type:'square',dur:.06,vol:.2}); },
-    move(){ beep({freq:480,type:'square',dur:.05,vol:.14}); },
-    shop(){ beep({freq:660,type:'triangle',dur:.08,vol:.18}); },
-    win(){ beep({freq:660,type:'sine',dur:.12,vol:.22}); setTimeout(()=>beep({freq:990,type:'sine',dur:.12,vol:.22}),100); },
-    lose(){ beep({freq:160,type:'sawtooth',dur:.22,vol:.22,slide:-60}); }
-  };
-
-  /* ===== Questions ===== */
-  const QUESTION_BANK=[
-    {id:1,q:"ได้อีเมลจากธนาคารให้คลิกลิงก์ยืนยันรหัสผ่าน ควรทำอย่างไร?",a:["คลิกลิงก์แล้วกรอกทันที","ตรวจสอบผู้ส่งและเข้าเว็บทางการเอง","ส่งให้เพื่อนคลิกลอง","ลบทิ้งทันทีโดยไม่ตรวจสอบ"],c:1,tip:"ฟิชชิ่งมักใช้ลิงก์ปลอม ควรพิมพ์ URL เองหรือเข้าช่องทางทางการ"},
-    {id:2,q:"รหัสผ่านที่ปลอดภัยควรเป็นแบบใด?",a:["123456","คำเดียวสั้นๆ","ยาว ≥ 12 ตัว มีตัวใหญ่/เล็ก ตัวเลข สัญลักษณ์","วันเกิด"],c:2,tip:"ใช้ Password Manager ช่วยสร้าง/จำ"},
-    {id:3,q:"ใช้ Wi‑Fi สาธารณะ ควร…",a:["ล็อกอินธนาคารได้เลย","เปิด VPN ก่อนใช้งาน","ปิด Firewall","แชร์ฮอตสปอตให้คนอื่น"],c:1,tip:"หลีกเลี่ยงทำธุรกรรมสำคัญบน Wi‑Fi สาธารณะ"},
-    {id:4,q:"มีคนทักมาขอรหัส OTP เพื่อยืนยันรับของ ควร…",a:["ส่งให้ได้ ถ้าเป็นเพื่อน","ห้ามให้ OTP กับใคร","ให้ถ้ามีบัตรประชาชน","บอกครึ่งหนึ่งพอ"],c:1,tip:"OTP เป็นรหัสลับเฉพาะตัว"},
-    {id:5,q:"ไฟล์แนบชื่อ ‘ใบแจ้งหนี้_ด่วน!.exe’ จากคนไม่รู้จัก ควร…",a:["เปิดดูเลย","อัปโหลดคลาวด์ก่อน","ลบ/รายงานสแปม","ส่งให้ฝ่ายบัญชีลองเปิด"],c:2,tip:"ไฟล์ .exe อาจเป็นมัลแวร์"},
-    {id:6,q:"เห็นข่าวด่วนจากเพจไม่รู้จัก ควร…",a:["แชร์ทันที","ตรวจสอบหลายแหล่งก่อนแชร์","คอมเมนต์ถามเพื่อน","ไม่อ่าน"],c:1,tip:"ตรวจสอบที่มา ลดข่าวปลอม"},
-    {id:7,q:"เว็บขึ้น Not Secure (ไม่มี 🔒) ควร…",a:["ใส่บัตรเครดิตต่อ","ออกจากเว็บ","รีเฟรชหน้า","ใช้มือถือแทน"],c:1,tip:"ไม่ควรกรอกข้อมูลสำคัญบนเว็บไม่มี HTTPS"},
-    {id:8,q:"เพื่อนส่งลิงก์สั้น bit.ly แปลกๆ ควร…",a:["คลิกเลย","พรีวิว/ขยายลิงก์ก่อน","ส่งให้คนอื่นคลิก","บันทึกไว้"],c:1,tip:"ใช้บริการขยายลิงก์หรือหลีกเลี่ยง"},
-    {id:9,q:"หลักการสำรองข้อมูลที่แนะนำคือ…",a:["เก็บเครื่องเดียว","3‑2‑1 Backup","ส่งเมลให้ตัวเอง","แชร์ลิงก์สาธารณะ"],c:1,tip:"3 ชุด / 2 สื่อ / 1 ชุดอยู่นอกสถานที่"},
-    {id:10,q:"Phishing คืออะไร?",a:["การหลอกให้ดาวน์โหลดเพลง","การหลอกให้เปิดเผยข้อมูลส่วนตัว","การบีบอัดไฟล์","การถ่ายรูปหน้าจอ"],c:1,tip:"มักมาเป็นอีเมล/ข้อความลวง"},
-    {id:11,q:"Two‑Factor Authentication (2FA) ช่วยอะไร?",a:["ทำให้ล็อกอินเร็วขึ้น","เพิ่มชั้นความปลอดภัย","เก็บรหัสผ่านแทนเรา","ลบมัลแวร์"],c:1,tip:"ต้องมีสิ่งที่รู้ + สิ่งที่มี"},
-    {id:12,q:"Password Manager มีประโยชน์อย่างไร?",a:["เดารหัสผู้อื่น","จัดเก็บ/สร้างรหัสที่แข็งแรง","แทนที่ 2FA","ทำให้รหัสสั้นลง"],c:1,tip:"ลดการใช้รหัสซ้ำ"},
-    {id:13,q:"สัญญาณอีเมลฟิชชิ่งคือ…",a:["ภาษาผิด ๆ ถูก ๆ","โดเมนปลอมคล้ายของจริง","ลิงก์ให้กรอกด่วน","ทั้งหมดถูก"],c:3,tip:"มักเร่งให้ทำทันที"},
-    {id:14,q:"มัลแวร์เรียกค่าไถ่ (Ransomware) ทำอะไร?",a:["เพิ่มความเร็วเน็ต","เข้ารหัสไฟล์และเรียกเงิน","ลบไฟล์ขยะ","สแกนไวรัส"],c:1,tip:"สำรองข้อมูลช่วยลดความเสี่ยง"},
-    {id:15,q:"ควรตั้งค่าอัปเดตระบบอัตโนมัติไหม?",a:["ไม่จำเป็น","ควร เปิดอัตโนมัติ","เฉพาะมือถือ","เฉพาะคอม"],c:1,tip:"แพตช์อุดช่องโหว่"},
-    {id:16,q:"ไฟล์แนบ .pdf จากผู้ส่งไม่รู้จักควร…",a:["เปิดทันที","สแกนด้วย AV/ดูตัวอย่างปลอดภัยก่อน","ส่งให้เพื่อน","แปลงเป็น .exe"],c:1,tip:"PDF อาจฝังสคริปต์ได้"},
-    {id:17,q:"Public USB (สายชาร์จสาธารณะ) เสี่ยงอะไร?",a:["ชาร์จช้า","Juice Jacking","ระเบิด","ร้อน"],c:1,tip:"ใช้ USB data blocker หรือชาร์จจากอะแดปเตอร์"},
-    {id:18,q:"Social Engineering คือ…",a:["การออกแบบเว็บ","การหลอกลวงทางสังคมเพื่อให้เปิดเผยข้อมูล","การทำโฆษณา","การออกแบบ UI"],c:1,tip:"ใช้จิตวิทยาหลอกให้ยอม"},
-    {id:19,q:"ควรตั้งค่า Privacy บนโซเชียลอย่างไร?",a:["สาธารณะทั้งหมด","เพื่อนเท่านั้นเมื่อเหมาะสม","ไม่ต้องตั้ง","แชร์โลเคชันสดตลอด"],c:1,tip:"ลดการเก็บข้อมูลส่วนตัวโดยไม่จำเป็น"},
-    {id:20,q:"ไฟล์ .apk จากเว็บนอกสโตร์ควร…",a:["ติดตั้งเลย","ตรวจสอบความน่าเชื่อถือหรือหลีกเลี่ยง","ส่งให้เพื่อน","เปลี่ยนชื่อไฟล์"],c:1,tip:"เสี่ยงมัลแวร์บนมือถือ"},
-    {id:21,q:"อุปกรณ์ IoT ควรทำสิ่งใดหลังซื้อ?",a:["ใช้รหัสเดิม","เปลี่ยนรหัสผ่านเริ่มต้น","ปิดการอัปเดต","แชร์ไวไฟให้มัน"],c:1,tip:"รหัสเดิมมักถูกเผยแพร่"},
-    {id:22,q:"ไฟร์วอลล์ช่วย…",a:["เพิ่มความสว่างจอ","ควบคุมทราฟฟิกเข้า‑ออก","แก้รูปภาพ","บีบอัดไฟล์"],c:1,tip:"กรองการเชื่อมต่อที่ไม่พึงประสงค์"},
-    {id:23,q:"Backups ควร…",a:["ทำเฉพาะตอนพัง","ทำสม่ำเสมอและทดสอบกู้คืน","ไม่จำเป็น","แชร์ลิงก์สาธารณะ"],c:1,tip:"สำคัญพอ ๆ กับข้อมูลจริง"},
-    {id:24,q:"ตัวชี้วัดเว็บปลอม…",a:["ส่วนลดเวอร์เกินจริง","โดเมนแปลก","สะกดผิดมาก","ทั้งหมดถูก"],c:3,tip:"ใช้ WHOIS/ตรวจรีวิวจริง"},
-    {id:25,q:"โทเคนยืนยันตัวตนคือ…",a:["ขนม","ฮาร์ดแวร์/แอปให้รหัสครั้งเดียว","ไวรัส","ธีม"],c:1,tip:"เช่น Authenticator"},
-    {id:26,q:"ควรแชร์รูปบัตรประชาชนบนโซเชียลไหม?",a:["ได้ ถ้าปิดชื่อ","ไม่ควร","ต้องใส่วอเตอร์มาร์กเท่านั้น","ปลอดภัย"],c:1,tip:"เสี่ยงขโมยข้อมูลส่วนบุคคล"},
-    {id:27,q:"ลิงก์ที่มีตัวสะกดคล้าย เช่น paypaI.com (I แทน l) คือ…",a:["เรียกค่าไถ่","Typosquatting","VPN","Cookie"],c:1,tip:"โดเมนเลียนแบบ"},
-    {id:28,q:"ถ้าเผลอกรอกรหัสในเว็บปลอม ควร…",a:["รอดู","รีบเปลี่ยนรหัสและเปิด 2FA","โพสต์บอกเพื่อน","ปิดเครื่อง"],c:1,tip:"จำกัดความเสียหายให้เร็ว"},
-    {id:29,q:"แนบไฟล์งานสำคัญทางอีเมล ควร…",a:["ไม่ใส่รหัส","เข้ารหัส/ใส่รหัส/ลิงก์จำกัดสิทธิ์","ส่งหลายฉบับ","ใช้ .exe"],c:1,tip:"Least privilege"},
-    {id:30,q:"Cookie คือ…",a:["ไวรัส","ข้อมูลสถานะ/เซสชันบนเบราเซอร์","ไฟล์เพลง","รูปภาพ"],c:1,tip:"ใช้จำการล็อกอิน"},
-    {id:31,q:"ควรใช้รหัสผ่านซ้ำหลายเว็บไหม?",a:["ได้สะดวก","ไม่ควร","เฉพาะเว็บเล็ก","เฉพาะอีเมล"],c:1,tip:"ถ้าหลุดจะโดนยกเซ็ต"},
-    {id:32,q:"QR ปลอมเสี่ยงอะไร?",a:["พาไปเว็บฟิชชิ่ง","ลงมัลแวร์","ขโมยข้อมูล","ทั้งหมดถูก"],c:3,tip:"ตรวจ URL ก่อนยืนยัน"},
-    {id:33,q:"อีเมลแนบไฟล์ .docm (มีแมโคร) ควร…",a:["เปิดแมโครเลย","ปิดแมโคร/สแกนก่อน","ส่งต่อ","บีบอัด"],c:1,tip:"แมโครอาจเรียกสคริปต์อันตราย"},
-    {id:34,q:"สังเกต HTTPS พอไหม?",a:["พอ 100%","ไม่พอ ยังต้องตรวจโดเมน/ความน่าเชื่อถือ","ไม่ต้องดูอย่างอื่น","ดูเฉพาะไอคอน"],c:1,tip:"HTTPS ก็อาจเป็นเว็บปลอมได้"},
-    {id:35,q:"สิทธิ์แอปมือถือ ‘อ่าน SMS’ ใช้เพื่อ…",a:["ความสวยงาม","ดึง OTP/แจ้งเตือน","ถ่ายรูป","เพิ่มแบต"],c:1,tip:"ให้เท่าที่จำเป็น"},
-    {id:36,q:"USB ที่เก็บตกได้หน้าอาคาร ควร…",a:["เสียบลอง","ส่ง รปภ./ผู้ดูแลระบบ","โยนทิ้ง","ประกาศแจก"],c:1,tip:"อาจฝังมัลแวร์"},
-    {id:37,q:"CAPTCHA มีไว้…",a:["ให้สวยงาม","ป้องกันบอต","เพิ่มโฆษณา","ลบไวรัส"],c:1,tip:"กรองทราฟฟิกอัตโนมัติ"},
-    {id:38,q:"ควรบันทึกพาสเวิร์ดในเบราเซอร์เครื่องสาธารณะไหม?",a:["ได้","ไม่ควร","แล้วแต่","ปลอดภัย"],c:1,tip:"เสี่ยงถูกดึง"},
-    {id:39,q:"อัปโหลดรูปใบเสร็จ/ข้อมูลบัตรขึ้นโซเชียล ควร…",a:["ได้","ปิดข้อมูลสำคัญหรือหลีกเลี่ยง","แท็กเพื่อน","โพสต์สาธารณะ"],c:1,tip:"ข้อมูลบัตรอ่อนไหว"},
-    {id:40,q:"สายชาร์จที่เป็นสายดักข้อมูล (OMG Cable) คือ…",a:["สายธรรมดา","อุปกรณ์จู่โจมแฝง","แค่หนา","เพิ่มความเร็ว"],c:1,tip:"อาจฉีดคำสั่ง/ขโมยข้อมูลได้"}
-  ];
-  const rand=n=>Math.floor(Math.random()*n);
-  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
-  function drawQuestions(){const pool=QUESTION_BANK.map(x=>({...x}));shuffle(pool);state.questions=pool;state.askedIds=new Set();}
-
-  /* ===== UI refs ===== */
-  const scrStart=document.getElementById('screen-start'),scrOver=document.getElementById('screen-over'),scrGame=document.getElementById('screen-game'),scrEnd=document.getElementById('screen-end');
-  const playerHpTxt=document.getElementById('playerHpTxt'),enemyHpTxt=document.getElementById('enemyHpTxt'),stageNum=document.getElementById('stageNum'),enemyName=document.getElementById('enemyName');
-  const potNum=document.getElementById('potNum'),powNum=document.getElementById('powNum'),buffTxt=document.getElementById('buffTxt'),scoreTxt=document.getElementById('scoreTxt');
-  const playerBar=document.getElementById('playerBar').firstElementChild,enemyBar=document.getElementById('enemyBar').firstElementChild;
-  const playerSprite=document.getElementById('playerSprite'),enemySprite=document.getElementById('enemySprite');
-  const btnAttack=document.getElementById('btnAttack'),btnPotion=document.getElementById('btnPotion'),btnPower=document.getElementById('btnPower'),btnRetreat=document.getElementById('btnRetreat');
-  const btnStart=document.getElementById('btnStart'),btnHow=document.getElementById('btnHow'), playerNameInput=document.getElementById('playerName');
-  const modal=document.getElementById('modal'),qText=document.getElementById('qText'),choicesBox=document.getElementById('choices'),tip=document.getElementById('tip'),toast=document.getElementById('toast');
-  const playerNameLbl=document.getElementById('playerNameLbl');
-  const bestLabel=document.getElementById('bestLabel'), bestFinal=document.getElementById('bestFinal');
-  const creditLabel=document.getElementById('creditLabel'), creditsTxt=document.getElementById('creditsTxt'), battleCredits=document.getElementById('battleCredits');
-  const ovName=document.getElementById('ovName'),ovPot=document.getElementById('ovPot'),ovPow=document.getElementById('ovPow'),ovSword=document.getElementById('ovSword'),ovArmor=document.getElementById('ovArmor'), nextStageLbl=document.getElementById('nextStageLbl');
-  const strip=document.getElementById('strip'); const overwrap=document.getElementById('overwrap'); const walker2=document.getElementById('walker2');
-  const shopModal=document.getElementById('shopModal'), shopCredits=document.getElementById('shopCredits');
-  const ownSword=document.getElementById('ownSword'), ownArmor=document.getElementById('ownArmor');
-  const btnToStart=document.getElementById('btnToStart'), btnBackOver=document.getElementById('btnBackOver');
-  const padLeft=document.getElementById('padLeft'), padRight=document.getElementById('padRight');
-  const gearSword=document.getElementById('gearSword'), gearArmor=document.getElementById('gearArmor');
-  const dialogModal=document.getElementById('dialogModal'), dialogText=document.getElementById('dialogText'), dialogOk=document.getElementById('dialogOk');
-  const fxLayer=document.getElementById('fxLayer');
-
-  function showToast(msg,dur=1200){toast.textContent=msg;toast.classList.add('show');setTimeout(()=>toast.classList.remove('show'),dur);}
-  function centerOf(el){const r=el.getBoundingClientRect(), stg=fxLayer.getBoundingClientRect();return {x:r.left-stg.left+r.width/2, y:r.top-stg.top+r.height*0.35};}
-  function spawnDamageAt(el, text, cls=''){const p=centerOf(el);const node=document.createElement('div');node.className='float-dmg '+cls;node.textContent=text;node.style.left=(p.x-8)+'px';node.style.top=(p.y-8)+'px';fxLayer.appendChild(node);setTimeout(()=>node.remove(),800);}
-  function spawnParticlesAt(el,count=8,color='#ffd166'){const p=centerOf(el);for(let i=0;i<count;i++){const dot=document.createElement('div');dot.className='particle';dot.style.left=(p.x-4)+'px';dot.style.top=(p.y-4)+'px';dot.style.background=color;dot.style.boxShadow=`0 0 10px ${color}AA`;const ang=Math.random()*Math.PI*2;const dist=30+Math.random()*30;const dx=Math.cos(ang)*dist;const dy=Math.sin(ang)*dist;dot.style.setProperty('--dx',dx+'px');dot.style.setProperty('--dy',dy+'px');fxLayer.appendChild(dot);setTimeout(()=>dot.remove(),600);}}
-  function flashScreen(){const f=document.createElement('div');f.className='flash';fxLayer.appendChild(f);setTimeout(()=>f.remove(),450);}
-
-  function setPlayerHud(){playerHpTxt.textContent=`${state.playerHp}/${PLAYER_MAX_HP}`;playerBar.style.width=`${(Math.max(state.playerHp,0)/PLAYER_MAX_HP)*100}%`;potNum.textContent=state.potion;powNum.textContent=state.power;buffTxt.textContent=`+${state.nextAttackBonus}`;scoreTxt.textContent=state.score; gearSword.textContent=state.gear.sword; gearArmor.textContent=state.gear.armor;}
-  function setEnemyHud(){const maxE=stages[state.stageIndex].hp;enemyHpTxt.textContent=`${state.enemyHp}/${maxE}`;const pct=Math.max(0,Math.min(100),(state.enemyHp/maxE)*100);enemyBar.style.width=pct+'%';}
-  function updateHud(){setPlayerHud();setEnemyHud();}
-
-  function applyTheme(){
-    const cls='theme-'+(state.stageIndex+1);
-    document.body.classList.remove('theme-1','theme-2','theme-3','theme-4','theme-5'); document.body.classList.add(cls);
-    const allCss=['enemy-scout','enemy-phish','enemy-fake','enemy-wifi','boss-ransom'];
-    allCss.forEach(c=>enemySprite.classList.remove(c));
-    enemySprite.classList.add(stages[state.stageIndex].css);
+  let idx = rand(0, QUESTIONS.length-1);
+  let guard = 0;
+  while((idx === excludeIdx || usedQuestions.has(idx)) && guard < 100){
+    idx = rand(0, QUESTIONS.length-1);
+    guard++;
   }
+  usedQuestions.add(idx);
+  return { idx, q: QUESTIONS[idx] };
+}
 
-  function setupStage(){
-    const st=stages[state.stageIndex];
-    state.enemyHp=st.hp; stageNum.textContent=state.stageIndex+1; enemyName.textContent=st.name;
-    applyTheme(); setEnemyHud(); document.querySelector('.stage').classList.add('stage-enter');
-    // Intro dialog per stage
-    showDialog(st.intro || "เริ่มภารกิจ!");
+function log(msg, cls=""){
+  const p = document.createElement('p');
+  p.textContent = msg;
+  if(cls) p.classList.add(cls);
+  logEl.appendChild(p);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function setHP(elBar, elText, hp, max){
+  const pct = Math.max(0, Math.min(100, Math.round(hp/max*100)));
+  elBar.style.width = pct + "%";
+  elText.textContent = hp + " / " + max;
+  elBar.style.background = pct > 50 ? "linear-gradient(90deg, var(--good), #27a86b)" :
+                         pct > 25 ? "linear-gradient(90deg, var(--warn), #caa63a)" :
+                                    "linear-gradient(90deg, var(--bad), #a83a44)";
+}
+
+function placeActor(el, x, y){
+  el.style.transform = `translate(${x*TILE}px, ${y*TILE}px)`;
+}
+
+function placeItem(x, y, type="potion"){
+  const id = `item-${x}-${y}`;
+  const d = document.createElement('div');
+  d.className = "item";
+  d.id = id;
+  d.style.transform = `translate(${x*TILE}px, ${y*TILE}px)`;
+  d.innerHTML = `<span class="emoji">${type==="potion" ? "💊" : "❤️"}</span>`;
+  itemsLayer.appendChild(d);
+}
+
+function floatScore(text, cls=""){
+  const n = document.createElement('div');
+  n.className = "floatScore";
+  if(cls==="good"){ n.style.borderColor="#1f8f5c"; }
+  if(cls==="bad"){ n.style.borderColor="#9b2431"; }
+  n.textContent = text;
+  floatLayer.appendChild(n);
+  setTimeout(()=> n.remove(), 1200);
+}
+
+// Start game
+function init(){
+  player = { x: 1, y: 1, hp: 100, hpMax: 100, armor: 0, level: 1, score: 0, potions: 1 };
+  enemy = null;
+  cleared = 0;
+  correctCount = 0;
+  wrongCount = 0;
+  potionsUsed = 0;
+  startTime = Date.now();
+  usedQuestions.clear();
+
+  hazards = new Set();
+  while (hazards.size < 16) {
+    hazards.add(`${rand(1,W-2)},${rand(1,H-2)}`);
   }
-
-  function showDialog(text){ dialogText.textContent=text; dialogModal.classList.add('active'); }
-  dialogOk.onclick=()=>{ dialogModal.classList.remove('active'); };
-
-  function saveProgress(){ localStorage.setItem(LS_CRED,String(state.credits)); localStorage.setItem(LS_GEAR, JSON.stringify(state.gear)); }
-  function renderBest(){ const best=parseInt(localStorage.getItem(LS_BEST)||'0',10); const bestName=localStorage.getItem(LS_BEST_NAME)||'-'; const label=best>0?`${best} (${bestName})`:'-'; bestLabel.textContent=label; bestFinal.textContent=label; }
-  function renderCredits(){ creditLabel.textContent=state.credits; creditsTxt.textContent=state.credits; battleCredits.textContent=state.credits; shopCredits.textContent=state.credits; }
-
-  /* Overworld */
-  function renderStrip(){
-    strip.innerHTML='';
-    for(let i=0;i<OVER_STEPS;i++){
-      const tile=document.createElement('div'); tile.className='tile';
-      if(i===OVER_STEPS-1) tile.classList.add('gate');
-      if(nextStageLbl.textContent==='5' && i===3) tile.classList.add('shop');
-      strip.appendChild(tile);
+  // spawn potions
+  potionSpots = new Set();
+  itemsLayer.innerHTML = "";
+  const potionCount = 6;
+  while (potionSpots.size < potionCount){
+    const key = `${rand(0,W-1)},${rand(0,H-1)}`;
+    if(!potionSpots.has(key) && key!=="1,1"){
+      potionSpots.add(key);
+      const [x,y] = key.split(',').map(Number);
+      placeItem(x,y,"potion");
     }
-    positionWalker(); walker2.style.display='block';
   }
-  function tileCenterX(idx){
-    const tiles = strip.querySelectorAll('.tile');
-    const wrapRect = overwrap.getBoundingClientRect();
-    const rect = tiles[idx].getBoundingClientRect();
-    return rect.left - wrapRect.left + rect.width/2;
+
+  placeActor(playerEl, player.x, player.y);
+  enemyEl.style.display = 'none';
+  hideScoreboard();
+  // High score
+  highScore = loadHighScore();
+  updateHSUI();
+
+  updateHUD();
+  logEl.innerHTML = "";
+  log("ยินดีต้อนรับสู่ CyberQuest v7!", "good");
+  log("คะแนน: ตอบถูก +5 | ชนะศัตรู +20~40 • 💊 ฟื้น +40HP | มี High Score", "good");
+}
+btnReset.addEventListener('click', init);
+btnPlayAgain.addEventListener('click', init);
+
+function updateHUD(lastGain=0){
+  setHP(hpHeroBar, hpHeroText, player.hp, player.hpMax);
+  scoreEl.textContent = player.score;
+  lvEl.textContent = player.level;
+  armorEl.textContent = player.armor;
+  potionsEl.textContent = player.potions;
+  lastGainEl.textContent = lastGain >= 0 ? `+${lastGain}` : `${lastGain}`;
+  if(enemy){
+    setHP(hpEnemyBar, hpEnemyText, enemy.hp, enemy.hpMax);
+    enemyTypeEl.textContent = enemy.type;
+  }else{
+    setHP(hpEnemyBar, hpEnemyText, 0, 100);
+    enemyTypeEl.textContent = "-";
   }
-  function positionWalker(){
-    const cx = tileCenterX(state.overPos);
-    walker2.style.left = (cx - 24) + 'px';
+}
+
+// Movement & encounters
+function tryMove(dx, dy){
+  if(encounterEl.classList.contains('show')) return; // lock during quiz
+  const nx = Math.max(0, Math.min(W-1, player.x + dx));
+  const ny = Math.max(0, Math.min(H-1, player.y + dy));
+  player.x = nx; player.y = ny;
+  placeActor(playerEl, nx, ny);
+
+  // pick up potion if present
+  const key = `${nx},${ny}`;
+  if(potionSpots.has(key)){
+    potionSpots.delete(key);
+    const el = document.getElementById(`item-${nx}-${ny}`);
+    if(el) el.remove();
+    player.potions += 1;
+    log("เก็บ 💊 ยาเพิ่มเลือด (+1)", "good");
+    floatScore("+ยาเพิ่มเลือด", "good");
+    updateHUD(0);
   }
-  function enterOverworld(){
-    scrStart.style.display='none'; scrGame.style.display='none'; scrEnd.style.display='none'; scrOver.style.display='block';
-    state.overPos=0;
-    ovName.textContent=state.playerName; ovPot.textContent=state.potion; ovPow.textContent=state.power; ovSword.textContent=state.gear.sword; ovArmor.textContent=state.gear.armor;
-    nextStageLbl.textContent = String(state.stageIndex+1);
-    renderCredits(); renderStrip();
+
+  // encounter check
+  if(hazards.has(key) || Math.random() < 0.10){
+    startEncounter();
   }
-  function moveOver(dir){
-    if(scrOver.style.display==='none') return;
-    const next=state.overPos+dir; if(next<0||next>=OVER_STEPS) return;
-    state.overPos=next; positionWalker(); sfx.move();
-    if(nextStageLbl.textContent==='5' && state.overPos===3){ openShop(); }
-    if(state.overPos===OVER_STEPS-1){ startBattle(); }
-  }
-  window.addEventListener('keydown', (e)=>{
-    if(scrOver.style.display!=='none'){
-      if(['ArrowRight','KeyD'].includes(e.code)) moveOver(+1);
-      if(['ArrowLeft','KeyA'].includes(e.code)) moveOver(-1);
-    }
+}
+
+function startEncounter(){
+  if(enemy && enemy.hp>0) return; // already in combat
+  const pick = pickQuestion();
+  const q = pick.q;
+  enemy = {
+    type: q.cat,
+    hp: 60 + rand(0,20),
+    hpMax: 80,
+    curQIdx: pick.idx
+  };
+  enemyEl.style.display='block';
+  placeActor(enemyEl, Math.min(W-2, player.x+rand(1,3)), Math.min(H-2, player.y+rand(0,2)));
+  encTypeEl.textContent = enemy.type;
+  enemyTypeEl.textContent = enemy.type;
+  setHP(hpEnemyBar, hpEnemyText, enemy.hp, enemy.hpMax);
+
+  renderQuestion(QUESTIONS[enemy.curQIdx]);
+  encounterEl.classList.add('show');
+  log(`พบภัยไซเบอร์ประเภท "${enemy.type}"!`, "bad");
+}
+
+function renderQuestion(q){
+  qText.textContent = q.q;
+  answersEl.innerHTML = "";
+  q.a.forEach((opt, i)=>{
+    const b = document.createElement('button');
+    b.className = "btn";
+    b.textContent = `• ${opt}`;
+    b.addEventListener('click', ()=> answer(q, i, b));
+    answersEl.appendChild(b);
   });
-  padLeft.onclick=()=>moveOver(-1); padRight.onclick=()=>moveOver(+1);
+}
 
-  /* Shop */
-  function openShop(){
-    renderCredits();
-    ownSword.style.display = state.gear.sword>0 ? 'block' : 'none';
-    ownArmor.style.display = state.gear.armor>0 ? 'block' : 'none';
-    shopModal.classList.add('active'); sfx.shop();
-  }
-  document.getElementById('closeShop').onclick=()=>shopModal.classList.remove('active');
-  shopModal.addEventListener('click',(e)=>{ if(e.target===shopModal) shopModal.classList.remove('active'); });
-  shopModal.querySelectorAll('button[data-buy]').forEach(btn=>{
-    btn.onclick=()=>{
-      const kind = btn.getAttribute('data-buy');
-      let price = PRICE[kind];
-      if(state.credits < price){ showToast('เครดิตไม่พอ'); return; }
-      if((kind==='sword' && state.gear.sword>0) || (kind==='armor' && state.gear.armor>0)){ showToast('ซื้อรายการนี้แล้ว'); return; }
-      state.credits -= price;
-      if(kind==='potion') state.potion++;
-      if(kind==='power') state.power++;
-      if(kind==='sword') state.gear.sword = 3;
-      if(kind==='armor') state.gear.armor = 1;
-      saveProgress(); renderCredits();
-      ownSword.style.display = state.gear.sword>0 ? 'block' : 'none';
-      ownArmor.style.display = state.gear.armor>0 ? 'block' : 'none';
-      showToast('ซื้อสำเร็จ!');
-    };
-  });
+function shake(el){
+  el.style.transition = "transform .08s";
+  el.style.transform += " translateX(3px)";
+  setTimeout(()=>{
+    el.style.transform = el.style.transform.replace(" translateX(3px)","");
+    el.style.transition = "transform .18s ease";
+  },90);
+}
 
-  /* Battle */
-  function startBattle(){
-    scrOver.style.display='none'; scrGame.style.display='block';
-    playerNameLbl.textContent = state.playerName;
-    setupStage(); updateHud();
-  }
-  function backToOverworld(){ scrGame.style.display='none'; enterOverworld(); }
+function answer(q, idx, btn){
+  const correct = idx === q.correct;
+  // disable buttons while processing
+  [...answersEl.children].forEach(b=> b.disabled = true);
 
-  function endGame(win){
-    scrGame.style.display='none'; scrEnd.style.display='block';
-    const t=document.getElementById('endTitle'),m=document.getElementById('endMsg');
-    if(win){ t.textContent='ชัยชนะ! คุณคือ Cyber Hero'; m.textContent=`คะแนนรวม: ${state.score} — ผู้เล่น: ${state.playerName}`; sfx.win(); }
-    else{ t.textContent='พ่ายแพ้… ลองใหม่อีกครั้ง'; m.textContent=`คุณสู้ถึงด่าน ${state.stageIndex+1} | คะแนนรวม: ${state.score} — ผู้เล่น: ${state.playerName}`; sfx.lose(); }
-    const prevBest=parseInt(localStorage.getItem(LS_BEST)||'0',10);
-    if(state.score>prevBest){ localStorage.setItem(LS_BEST,String(state.score)); localStorage.setItem(LS_BEST_NAME,state.playerName); showToast('สถิติใหม่ของเครื่องนี้! 🎉', 1500); flashScreen(); }
-    renderBest();
-  }
+  if(correct){
+    correctCount++;
+    btn.classList.add('correct');
 
-  function nextStage(){
-    // Outtro dialog for cleared stage
-    const cleared = stages[state.stageIndex];
-    showDialog(cleared.outtro || "ผ่านด่าน!");
-    state.credits += REWARD_STAGE_CLEAR; saveProgress(); renderCredits();
-    if(state.stageIndex < stages.length-1){
-      state.stageIndex++; backToOverworld(); showToast('ผ่านด่าน! +'+REWARD_STAGE_CLEAR+'🪙');
-    }else{ endGame(true); }
-  }
+    // scoring for correct answer
+    player.score += SCORE_CORRECT;
+    floatScore(`+${SCORE_CORRECT} คะแนน`, "good");
+    updateHUD(SCORE_CORRECT);
 
-  function askQuestion(action){
-    state.action=action;
-    const pool=state.questions.filter(q=>!state.askedIds.has(q.id));
-    if(pool.length===0) drawQuestions();
-    const q=(pool.length?pool[rand(pool.length)]:state.questions[rand(state.questions.length)]);
-    state.askedIds.add(q.id);
-    qText.textContent=q.q; tip.textContent=''; choicesBox.innerHTML='';
-    q.a.forEach((text,idx)=>{ const b=document.createElement('button'); b.className='choice'; b.textContent=text; b.onclick=()=>resolveAnswer(idx,q.c,q.tip); choicesBox.appendChild(b); });
-    modal.classList.add('active');
-  }
+    // damage enemy
+    const dmg = 30 + rand(0,10) + Math.round(player.level*2);
+    enemy.hp = Math.max(0, enemy.hp - dmg);
+    setHP(hpEnemyBar, hpEnemyText, enemy.hp, enemy.hpMax);
+    log(`ตอบถูก! คุณโจมตีศัตรู (-${dmg} HP) • +${SCORE_CORRECT} คะแนน`, "good");
 
-  function resolveAnswer(chosenIdx,correctIdx,tipText){
-    modal.classList.remove('active');
-    const st=stages[state.stageIndex]; const correct=(chosenIdx===correctIdx);
-    if(correct) sfx.correct(); else sfx.wrong();
-
-    if(state.action==='attack'){
-      if(correct){
-        const dmg = 1 + state.nextAttackBonus + state.gear.sword;
-        const usedPower = state.nextAttackBonus>0;
-        state.nextAttackBonus=0;
-        // New: player lunge forward
-        playerSprite.classList.add('lunge'); setTimeout(()=>playerSprite.classList.remove('lunge'), 320);
-        enemySprite.classList.add('hit'); setTimeout(()=>enemySprite.classList.remove('hit'),260);
-        spawnDamageAt(enemySprite, `-${dmg}`, 'bad'); spawnParticlesAt(enemySprite, 10, st.boss ? '#ff5a5a' : '#ffd166');
-        if(usedPower){ spawnDamageAt(enemySprite, 'POWER!', 'power'); sfx.power(); }
-        state.credits += REWARD_PER_DMG * dmg; saveProgress(); renderCredits();
-        state.enemyHp=Math.max(0,state.enemyHp-dmg); state.score+=10*dmg; updateHud();
-        if(state.enemyHp<=0){ spawnParticlesAt(enemySprite, 26, '#ff8a8a'); flashScreen(); nextStage(); return; }
-      }else{ playerHit(st.boss?DMG_WRONG_BOSS:DMG_WRONG_NORMAL); }
-    }else if(state.action==='potion'){
-      if(state.potion<=0){ showToast('ไม่มี Potion แล้ว'); return; }
-      if(correct){ state.potion--; state.playerHp=Math.min(PLAYER_MAX_HP,state.playerHp+POTION_HEAL);
-        playerSprite.classList.add('hit'); setTimeout(()=>playerSprite.classList.remove('hit'),260);
-        spawnDamageAt(playerSprite, `+${POTION_HEAL}`, 'good'); spawnParticlesAt(playerSprite, 10, '#7bf1a8'); showToast('ฟื้นพลัง +5 HP'); sfx.heal();
-      }else{ state.potion--; showToast('ใช้ Potion ล้มเหลว!'); playerHit(st.boss?DMG_WRONG_BOSS:DMG_WRONG_NORMAL); }
-    }else if(state.action==='power'){
-      if(state.power<=0){ showToast('ไม่มี Power-Up แล้ว'); return; }
-      if(correct){ state.power--; state.nextAttackBonus=POWER_BONUS; showToast('บัฟโจมตีครั้งถัดไป +2'); spawnDamageAt(playerSprite, 'POWER UP', 'power'); sfx.power(); }
-      else{ state.power--; showToast('ใช้ Power-Up ล้มเหลว!'); playerHit(st.boss?DMG_WRONG_BOSS:DMG_WRONG_NORMAL); }
+    if(enemy.hp<=0){
+      cleared++;
+      const reward = 20 + rand(0,20);
+      player.score += reward;
+      floatScore(`+${reward} คะแนน (ชนะ)`, "good");
+      // chance to drop a potion
+      if(Math.random() < POTION_DROP_CHANCE){
+        player.potions += 1;
+        log("ได้ 💊 จากการชนะ (+1)", "good");
+      }
+      player.armor += 1;
+      if(cleared % 2 === 0){ // level up every 2 clears
+        player.level++;
+        player.hpMax += 10;
+        player.hp = Math.min(player.hpMax, player.hp + 20);
+        log(`เลเวลอัปเป็น Lv.${player.level}! พลังชีวิตเพิ่ม`, "good");
+      }
+      log(`คุณชนะการเผชิญหน้า! ได้คะแนน +${reward}`, "good");
+      if(cleared >= toWin){
+        endGame(true);
+        return;
+      }
+      encounterEl.classList.remove('show');
+      enemy = null;
+      updateHUD(reward);
+      return;
+    } else {
+      // pick a NEW question (different from current) and render
+      const next = pickQuestion(enemy.curQIdx);
+      enemy.curQIdx = next.idx;
+      setTimeout(()=>{
+        renderQuestion(QUESTIONS[enemy.curQIdx]);
+        [...answersEl.children].forEach(b=> b.disabled = false);
+      }, 180);
+      return;
     }
-    tip.textContent = correct ? ('✔ '+(tipText||'')) : ('✖ '+(tipText||''));
-    setPlayerHud();
+  }else{
+    wrongCount++;
+    btn.classList.add('wrong');
+    const base = 22 + rand(0,10);
+    const reduced = Math.max(1, base - player.armor*2);
+    player.hp = Math.max(0, player.hp - reduced);
+    setHP(hpHeroBar, hpHeroText, player.hp, player.hpMax);
+    shake(playerEl);
+    log(`ตอบผิด! คุณได้รับความเสียหาย (-${reduced} HP)`, "bad");
+    floatScore(`-${reduced} HP`, "bad");
+    updateHUD(0);
+
+    if(player.hp<=0){
+      endGame(false);
+      return;
+    } else {
+      // same question repeats
+      setTimeout(()=>{
+        [...answersEl.children].forEach(b=> b.disabled = false);
+      }, 160);
+      return;
+    }
   }
+}
 
-  function playerHit(baseDmg){
-    const st=stages[state.stageIndex];
-    const reduce = state.gear.armor>0 ? 1 : 0;
-    const raw = st.boss ? DMG_WRONG_BOSS : baseDmg;
-    const dmg = Math.max(1, raw - reduce);
-    enemySprite.classList.add('attack'); setTimeout(()=>enemySprite.classList.remove('attack'),260);
-    playerSprite.classList.add('shake'); setTimeout(()=>playerSprite.classList.remove('shake'),220);
-    spawnDamageAt(playerSprite, `-${dmg}`, 'bad'); spawnParticlesAt(playerSprite,8,'#89b4ff');
-    state.playerHp=Math.max(0,state.playerHp-dmg); setPlayerHud(); sfx.hit();
-    if(state.playerHp<=0){ endGame(false); }
+// Use potion
+function usePotion(){
+  if(player.potions <= 0){
+    log("ไม่มี 💊 ในกระเป๋า", "bad");
+    return;
   }
-
-  /* Flow */
-  function startRun(){
-    ensureAudio(); // will initialize on first click/tap
-    const name=(playerNameInput.value||'').trim()||'Guest';
-    state.playerName=name; localStorage.setItem(LS_NAME,name); playerNameLbl.textContent=name;
-    state.credits=parseInt(localStorage.getItem(LS_CRED)||'0',10);
-    try{ state.gear=JSON.parse(localStorage.getItem(LS_GEAR)||'{"sword":0,"armor":0}'); }catch{ state.gear={sword:0,armor:0}; }
-    state.playerHp=PLAYER_MAX_HP; state.potion=2; state.power=2; state.nextAttackBonus=0; state.score=0; state.stageIndex=0;
-    drawQuestions(); renderBest(); renderCredits();
-    scrStart.style.display='none'; enterOverworld();
+  if(player.hp >= player.hpMax){
+    log("พลังชีวิตเต็มอยู่แล้ว", "bad");
+    return;
   }
+  player.potions -= 1;
+  potionsUsed += 1;
+  const heal = Math.min(HEAL_PER_POTION, player.hpMax - player.hp);
+  player.hp += heal;
+  setHP(hpHeroBar, hpHeroText, player.hp, player.hpMax);
+  log(`ใช้ 💊 ยาเพิ่มเลือด +${heal} HP`, "good");
+  floatScore(`+${heal} HP`, "good");
+  updateHUD(0);
+}
+btnUsePotion.addEventListener('click', usePotion);
 
-  /* Events */
-  document.getElementById('btnRestart').onclick=()=>{ startRun(); };
-  document.getElementById('btnBackOver').onclick=()=>{ scrEnd.style.display='none'; enterOverworld(); };
-  document.getElementById('btnToStart').onclick=()=>{ scrOver.style.display='none'; scrStart.style.display='block'; };
-  btnStart.onclick=startRun;
-  btnHow.onclick=()=>{
-    const q=QUESTION_BANK[rand(QUESTION_BANK.length)];
-    qText.textContent=q.q; tip.textContent=''; choicesBox.innerHTML='';
-    q.a.forEach((t,i)=>{ const b=document.createElement('button'); b.className='choice'; b.textContent=t; b.onclick=()=>{ modal.classList.remove('active'); }; choicesBox.appendChild(b); });
-    modal.classList.add('active');
-  };
-  btnAttack.onclick=()=>{ ensureAudio(); askQuestion('attack'); };
-  btnPotion.onclick=()=>{ ensureAudio(); askQuestion('potion'); };
-  btnPower.onclick=()=>{ ensureAudio(); askQuestion('power'); };
-  btnRetreat.onclick=backToOverworld;
-  modal.addEventListener('click', (e)=>{ if(e.target===modal){ modal.classList.remove('active'); } });
-  dialogModal.addEventListener('click', (e)=>{ if(e.target===dialogModal){ dialogModal.classList.remove('active'); } });
+// Keyboard controls
+const KEYS = new Map([
+  ["ArrowUp",[0,-1]], ["ArrowDown",[0,1]], ["ArrowLeft",[-1,0]], ["ArrowRight",[1,0]],
+  ["w",[0,-1]], ["W",[0,-1]], ["s",[0,1]], ["S",[0,1]],
+  ["a",[-1,0]], ["A",[-1,0]], ["d",[1,0]], ["D",[1,0]],
+  ["e","usePotion"], ["E","usePotion"]
+]);
+function onKey(e){
+  const k = KEYS.get(e.key);
+  if(!k) return;
+  e.preventDefault();
+  if(Array.isArray(k)){
+    tryMove(k[0],k[1]);
+  }else if(k==="usePotion"){
+    usePotion();
+  }
+}
+window.addEventListener('keydown', onKey);
+gridEl.addEventListener('keydown', onKey);
 
-  // Prefill name/credits on load
-  (function init(){
-    const last=localStorage.getItem(LS_NAME)||'';
-    if(last){ playerNameInput.value=last; }
-    state.credits=parseInt(localStorage.getItem(LS_CRED)||'0',10);
-    renderBest(); renderCredits();
-  })();
+// Focus helpers
+gridEl.addEventListener('click', ()=> gridEl.focus());
+btnFocus.addEventListener('click', ()=> gridEl.focus());
+
+// D-Pad buttons + hold
+function move(dx,dy){ tryMove(dx,dy); }
+btnUp.addEventListener('click', ()=> move(0,-1));
+btnDown.addEventListener('click', ()=> move(0,1));
+btnLeft.addEventListener('click', ()=> move(-1,0));
+btnRight.addEventListener('click', ()=> move(1,0));
+function hold(btn, dx, dy){
+  let t;
+  const start = ()=>{ move(dx,dy); t=setInterval(()=>move(dx,dy),180); };
+  const end = ()=> clearInterval(t);
+  btn.addEventListener('touchstart', (e)=>{e.preventDefault(); start();}, {passive:false});
+  btn.addEventListener('touchend', end);
+  btn.addEventListener('mousedown', start);
+  btn.addEventListener('mouseup', end);
+  btn.addEventListener('mouseleave', end);
+}
+hold(btnUp,0,-1); hold(btnDown,0,1); hold(btnLeft,-1,0); hold(btnRight,1,0);
+
+// Scoreboard + High Score
+function endGame(win){
+  encounterEl.classList.remove('show');
+  const elapsed = Math.max(0, Math.round((Date.now()-startTime)/1000));
+  const mm = String(Math.floor(elapsed/60)).padStart(1,'0');
+  const ss = String(elapsed%60).padStart(2,'0');
+
+  // Update high score
+  if(player.score > highScore){
+    highScore = player.score;
+    saveHighScore(highScore);
+  }
+  updateHSUI();
+
+  scStatus.textContent = win ? "ชนะเกม 🎉" : "พ่ายแพ้ 💥";
+  scScore.textContent = player.score;
+  scBest.textContent = highScore;
+  scClears.textContent = cleared;
+  scCorrect.textContent = correctCount;
+  scWrong.textContent = wrongCount;
+  scPotionsUsed.textContent = potionsUsed;
+  scTime.textContent = `${mm}:${ss}`;
+  scoreModal.classList.add('show');
+}
+
+function hideScoreboard(){
+  scoreModal.classList.remove('show');
+}
+
+// Clear HS
+if(btnClearHS){
+  btnClearHS.addEventListener('click', ()=>{
+    try{ localStorage.removeItem(HS_KEY); }catch(e){}
+    highScore = 0;
+    updateHSUI();
+    scBest.textContent = highScore;
+    log("ล้างสถิติสูงสุดแล้ว", "good");
+  });
+}
+
+// Init
+init();
 </script>
 </body>
 </html>
